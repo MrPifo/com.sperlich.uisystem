@@ -114,7 +114,7 @@ namespace Sperlich.UISystem {
 			if (actionFadeTween.isAlive) {
 				actionFadeTween.Stop();
 			}
-			actionFadeTween = ActionCanvasGroup.DOFade(1f, speed).SetEase(Ease.InOutSine).OnComplete(() => {
+			actionFadeTween = Tween.Alpha(ActionCanvasGroup, 1f, speed, Ease.InOutSine).OnComplete(() => {
 				ActionCanvasGroup.interactable = true;
 				ActionCanvasGroup.blocksRaycasts = true;
 			});
@@ -133,7 +133,7 @@ namespace Sperlich.UISystem {
 			if (actionFadeTween.isAlive) {
 				actionFadeTween.Stop();
 			}
-			actionFadeTween = ActionCanvasGroup.DOFade(0f, speed).SetEase(Ease.InOutSine).OnComplete(() => {
+			actionFadeTween = Tween.Alpha(ActionCanvasGroup, 0f, speed, Ease.InOutSine).OnComplete(() => {
 				ActionCanvasGroup.interactable = false;
 				ActionCanvasGroup.blocksRaycasts = false;
 			});

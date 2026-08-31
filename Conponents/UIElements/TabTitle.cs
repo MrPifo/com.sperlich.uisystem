@@ -71,7 +71,7 @@ namespace Sperlich.UISystem {
 		void Activate() {
 			isActive = true;
 
-			transform.DOScale(1.06f, FadeSpeed).SetEase(FadeInEase);
+			Tween.Scale(transform, 1.06f, FadeSpeed, FadeInEase);
 			AnimateImageColor(btnImage, ComponentState.Selected, FadeSpeed);
 			AnimateImageColor(iconImage, ComponentState.Hovered, FadeSpeed / 2f);
 
@@ -80,7 +80,7 @@ namespace Sperlich.UISystem {
 		void Deactivate() {
 			isActive = false;
 
-			transform.DOScale(1f, FadeSpeed).SetEase(FadeOutEase);
+			Tween.Scale(transform, 1f, FadeSpeed, FadeOutEase);
 			AnimateImageColor(btnImage, ComponentState.Normal, FadeSpeed);
 			AnimateImageColor(iconImage, ComponentState.Disabled, FadeSpeed / 2f);
 
@@ -95,7 +95,7 @@ namespace Sperlich.UISystem {
 		}
 
 		void AnimateImageColor(Image img, ComponentState state, float speed) {
-			img.DOColor(colors.GetColor(state), speed);
+			Tween.Color(img, colors.GetColor(state), speed);
 		}
 	}
 }

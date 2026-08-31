@@ -51,8 +51,8 @@ namespace Sperlich.UISystem {
 
 			if (token.IsCancellationRequested) return;
 
-			fadeTween = CanvasGroup.DOFade(1f, duration);
-			await fadeTween.AsyncWaitForCompletion();
+			fadeTween = Tween.Alpha(CanvasGroup, 1f, duration);
+			await fadeTween;
 
 			if (token.IsCancellationRequested) return;
 
@@ -74,8 +74,8 @@ namespace Sperlich.UISystem {
 			CanvasGroup.interactable = false;
 			CanvasGroup.blocksRaycasts = false;
 
-			fadeTween = CanvasGroup.DOFade(0f, duration);
-			await fadeTween.AsyncWaitForCompletion();
+			fadeTween = Tween.Alpha(CanvasGroup, 0f, duration);
+			await fadeTween;
 
 			if (token.IsCancellationRequested) return;
 

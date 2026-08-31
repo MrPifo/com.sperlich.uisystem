@@ -29,9 +29,9 @@ namespace Sperlich.UISystem {
 			cancelBtn.AddEvent(EventSignal.Submit, OnBtnCancel);
 			confirmBtn.Navigator.SetSelectable(Navigator.NavDir.Right, cancelBtn);
 			cancelBtn.Navigator.SetSelectable(Navigator.NavDir.Left, confirmBtn);
-			modalTransform.DOScale(Vector3.one, 0.45f).From(Vector3.one * 1.4f).SetEase(Ease.OutCirc);
+			Tween.Scale(modalTransform, Vector3.one * 1.4f, Vector3.one, 0.45f, Ease.OutCirc);
 			Tween.EulerAngles(modalTransform, new Vector3(0, 0, -5), Vector3.zero, 0.5f, Ease.OutBounce);
-			modalTransform.DOAnchorPos(Vector2.zero, 0.35f).From(new Vector2(100, 100)).SetEase(Ease.OutCirc);
+			Tween.UIAnchoredPosition(modalTransform, new Vector2(100, 100), Vector2.zero, 0.35f, Ease.OutCirc);
 
 			this.preSelectConfirmBtn = preSelectConfirmBtn;
 			this.OnConfirmAction = onConfirmAction;
@@ -64,8 +64,8 @@ namespace Sperlich.UISystem {
 			OnOpenBeginEvent.Invoke();
 
 			UINavigator.TriggerCooldown(duration);
-			canvasTween = CanvasGroup.DOFade(1f, duration);
-			await canvasTween.AsyncWaitForCompletion();
+			canvasTween = Tween.Alpha(CanvasGroup, 1f, duration);
+			await canvasTween;
 
 			if (token.IsCancellationRequested) return;
 
@@ -90,12 +90,12 @@ namespace Sperlich.UISystem {
 			UINavigator.ClearSelection(true);
 			OnCloseBeginEvent.Invoke();
 
-			modalTransform.DOAnchorPos(new Vector2(0, -600), duration).SetEase(Ease.OutSine);
-			modalTransform.DOPunchRotation(new Vector3(0, 0, 8), duration).SetEase(Ease.InOutSine);
+			Tween.UIAnchoredPosition(modalTransform, new Vector2(0, -600), duration, Ease.OutSine);
+			Tween.PunchLocalRotation(modalTransform, new Vector3(0, 0, 8), duration, ease: Ease.InOutSine);
 			UINavigator.TriggerCooldown(duration);
 			UINavigator.RemoveActiveSubMenu(this);
-			canvasTween = CanvasGroup.DOFade(0f, duration);
-			await canvasTween.AsyncWaitForCompletion();
+			canvasTween = Tween.Alpha(CanvasGroup, 0f, duration);
+			await canvasTween;
 
 			if (token.IsCancellationRequested) return;
 

@@ -132,8 +132,8 @@ namespace Sperlich.UISystem {
 
 			DisplayControlBar();
 			UINavigator.TriggerCooldown(duration);
-			canvasTween = CanvasGroup.DOFade(1f, duration);
-			await canvasTween.AsyncWaitForCompletion();
+			canvasTween = Tween.Alpha(CanvasGroup, 1f, duration);
+			await canvasTween;
 
 			if (token.IsCancellationRequested) return;
 
@@ -165,8 +165,8 @@ namespace Sperlich.UISystem {
 			}
 
 			UINavigator.TriggerCooldown(duration);
-			canvasTween = CanvasGroup.DOFade(0f, duration);
-			await canvasTween.AsyncWaitForCompletion();
+			canvasTween = Tween.Alpha(CanvasGroup, 0f, duration);
+			await canvasTween;
 
 			if (token.IsCancellationRequested) return;
 
