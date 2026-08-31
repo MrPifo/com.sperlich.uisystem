@@ -6,8 +6,18 @@ using UnityEngine.EventSystems;
 namespace Sperlich.UISystem.Conponents.UIElements
 {
     /// <summary>
+    /// Layout-Modus für die VirtualScrollView (1-spaltige vertikale Liste oder mehrspaltiges Grid).
+    /// </summary>
+    public enum VirtualScrollMode
+    {
+        VerticalList,
+        Grid
+    }
+
+    /// <summary>
     /// Eine performante Virtual-Scroll-Komponente, entkoppelt von Daten und Prefabs.
     /// Handelt Input, Momentum-Scrolling und triggert das Pooling über den IVirtualScrollAdapter.
+    /// Unterstützt vertikale 1-Spalten-Listen sowie mehrspaltige Grids.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public class VirtualScrollView : MonoBehaviour, IScrollHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
@@ -16,9 +26,19 @@ namespace Sperlich.UISystem.Conponents.UIElements
         [Tooltip("Das RectTransform, das skaliert und in dem die Items platziert werden.")]
         public RectTransform ContentRect;
 
-        [Header("Layout Properties")]
+        [Header("Layout Mode")]
+        public VirtualScrollMode Mode = VirtualScrollMode.VerticalList;
+
+        [Header("Layout Properties (Vertical List)")]
         public float ItemHeight = 50f;
-        public float Spacing = 5f;
+        public float SpacingY = 5f;
+
+        [Header("Layout Properties (Grid)")]
+        public Vector2 GridItemSize = new Vector2(150f, 150f);
+        public Vector2 GridSpacing = new Vector2(10f, 10f);
+        [Range(1, 12)]
+        public int Columns = 4;
+        public Vector2 GridPadding = new Vector2(0f, 0f);
 
         [Header("Scrolling Properties")]
         public float ScrollSensitivity = 25f;
@@ -65,12 +85,21 @@ namespace Sperlich.UISystem.Conponents.UIElements
         /// </summary>
         public void RebuildLayout()
         {
-            if (_adapter == null) return;
+            if (_adapter == null || ContentRect == null) return;
 
             _lastItemCount = _adapter.GetItemCount();
             
             // Passe die Größe des Contents an
-            float contentHeight = VirtualScrollMath.CalculateContentHeight(_lastItemCount, ItemHeight, Spacing);
+            float contentHeight = 0f;
+            if (Mode == VirtualScrollMode.VerticalList)
+            {
+                contentHeight = VirtualScrollMath.CalculateContentHeight(_lastItemCount, ItemHeight, SpacingY);
+            }
+            else
+            {
+                contentHeight = VirtualScrollMath.CalculateGridContentHeight(_lastItemCount, GridItemSize.y, GridSpacing.y, Columns) + (GridPadding.y * 2f);
+            }
+
             ContentRect.sizeDelta = new Vector2(ContentRect.sizeDelta.x, contentHeight);
 
             // Bounds sichern
@@ -82,7 +111,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void Update()
         {
-            if (_adapter == null) return;
+            if (_adapter == null || ContentRect == null || _viewportRect == null) return;
 
             // Kinetic Scrolling (Momentum)
             if (!_isDragging && Mathf.Abs(_velocity) > 0.1f)
@@ -124,6 +153,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void ClampScrollPosition()
         {
+            if (ContentRect == null || _viewportRect == null) return;
             float contentHeight = ContentRect.rect.height;
             float viewHeight = _viewportRect.rect.height;
             float maxScroll = Mathf.Max(0, contentHeight - viewHeight);
@@ -136,20 +166,40 @@ namespace Sperlich.UISystem.Conponents.UIElements
         /// </summary>
         private void RefreshVisibleItems()
         {
+            if (_adapter == null || ContentRect == null || _viewportRect == null) return;
+
             if (_lastItemCount == 0)
             {
                 ReleaseAll();
                 return;
             }
 
-            VirtualScrollMath.CalculateVisibleIndices(
-                _currentScrollY, 
-                _viewportRect.rect.height, 
-                ItemHeight, 
-                Spacing, 
-                _lastItemCount, 
-                out int newStartIndex, 
-                out int newEndIndex);
+            int newStartIndex;
+            int newEndIndex;
+
+            if (Mode == VirtualScrollMode.VerticalList)
+            {
+                VirtualScrollMath.CalculateVisibleIndices(
+                    _currentScrollY, 
+                    _viewportRect.rect.height, 
+                    ItemHeight, 
+                    SpacingY, 
+                    _lastItemCount, 
+                    out newStartIndex, 
+                    out newEndIndex);
+            }
+            else
+            {
+                VirtualScrollMath.CalculateGridVisibleIndices(
+                    _currentScrollY, 
+                    _viewportRect.rect.height, 
+                    GridItemSize.y, 
+                    GridSpacing.y, 
+                    Columns, 
+                    _lastItemCount, 
+                    out newStartIndex, 
+                    out newEndIndex);
+            }
 
             // 1. Entfernen: Welche Indizes sind in _activeItems, aber nicht in [newStart, newEnd]?
             List<int> toRemove = new List<int>();
@@ -175,11 +225,16 @@ namespace Sperlich.UISystem.Conponents.UIElements
             {
                 if (i < 0 || i >= _lastItemCount) continue;
 
-                float targetY = VirtualScrollMath.CalculateLocalPositionY(i, ItemHeight, Spacing);
-                Vector2 targetPos = new Vector2(ContentRect.rect.width / 2f, targetY - (ItemHeight / 2f)); // Mittig im Layout positioniert
-                // Alternativ: Top-Left Anchor vorausgesetzt. Wir gehen von Pivot(0.5, 0.5) oder (0,1) aus.
-                // Angenommen Pivot ist Top-Center (0.5, 1):
-                targetPos = new Vector2(0f, targetY);
+                Vector2 targetPos;
+                if (Mode == VirtualScrollMode.VerticalList)
+                {
+                    float targetY = VirtualScrollMath.CalculateLocalPositionY(i, ItemHeight, SpacingY);
+                    targetPos = new Vector2(0f, targetY);
+                }
+                else
+                {
+                    targetPos = VirtualScrollMath.CalculateGridLocalPosition(i, Columns, GridItemSize, GridSpacing, GridPadding);
+                }
 
                 if (!_activeItems.TryGetValue(i, out RectTransform item))
                 {
@@ -187,13 +242,27 @@ namespace Sperlich.UISystem.Conponents.UIElements
                     item = _adapter.GetItem(i);
                     item.SetParent(ContentRect, false);
                     
+                    // Setup RectTransform Anchors für konsistente Top-Placement
+                    item.anchorMin = new Vector2(0f, 1f);
+                    item.anchorMax = new Vector2(0f, 1f);
+                    item.pivot = new Vector2(0f, 1f);
+                    if (Mode == VirtualScrollMode.VerticalList)
+                    {
+                        // Über die gesamte Breite spannen oder feste Höhe
+                        item.sizeDelta = new Vector2(ContentRect.rect.width, ItemHeight);
+                    }
+                    else
+                    {
+                        item.sizeDelta = GridItemSize;
+                    }
+
                     // Bei Initial-Spawn hart setzen
                     item.anchoredPosition = targetPos;
                     _activeItems[i] = item;
                 }
                 else
                 {
-                    // Bereits aktiv, einfach Position updaten (falls Index durch Löschung verrutscht ist)
+                    // Bereits aktiv, einfach Position updaten
                     if (_animator != null)
                     {
                         _animator.MoveItemTo(item, targetPos);
@@ -211,6 +280,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void ReleaseAll()
         {
+            if (_adapter == null) return;
             foreach (var kvp in _activeItems)
             {
                 if (_animator != null) _animator.CancelAnimationFor(kvp.Value);
@@ -227,7 +297,10 @@ namespace Sperlich.UISystem.Conponents.UIElements
             _currentScrollY -= eventData.scrollDelta.y * ScrollSensitivity;
             if (!Elasticity) ClampScrollPosition();
             
-            ContentRect.anchoredPosition = new Vector2(ContentRect.anchoredPosition.x, _currentScrollY);
+            if (ContentRect != null)
+            {
+                ContentRect.anchoredPosition = new Vector2(ContentRect.anchoredPosition.x, _currentScrollY);
+            }
             RefreshVisibleItems();
         }
 
@@ -239,19 +312,20 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         public void OnDrag(PointerEventData eventData)
         {
-            // eventData.delta.y ist positiv wenn man nach oben wischt (Finger geht hoch -> Content geht hoch -> Scroll offset geht runter)
             _currentScrollY -= eventData.delta.y; 
             
             if (!Elasticity) ClampScrollPosition();
             
-            ContentRect.anchoredPosition = new Vector2(ContentRect.anchoredPosition.x, _currentScrollY);
+            if (ContentRect != null)
+            {
+                ContentRect.anchoredPosition = new Vector2(ContentRect.anchoredPosition.x, _currentScrollY);
+            }
             RefreshVisibleItems();
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
             _isDragging = false;
-            // Velocity für Kinetic Scrolling initialisieren (Pixel pro Frame, konvertiert in Sekunden)
             _velocity = eventData.delta.y / Time.deltaTime;
         }
 
