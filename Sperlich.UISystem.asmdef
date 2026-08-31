@@ -9,7 +9,7 @@
                        "GUID:37124e22ec38e6e47b2e7a1ec93856ef",
                        "GUID:80ecb87cae9c44d19824e70ea7229748",
                        "Sperlich.Layout",
-                       "PrimeTween",
+                       "PrimeTween.Runtime",
                        "UniTask"
                    ],
     "includePlatforms":  [
