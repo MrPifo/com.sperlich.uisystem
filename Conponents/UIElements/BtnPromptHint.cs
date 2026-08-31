@@ -31,7 +31,9 @@ namespace Sperlich.UISystem {
 				_text = GetComponentInChildren<TMP_Text>();
 			}
 			if (_text != null) {
-				_text.color = txtColor.GetColor(ComponentState.Normal);
+				if (txtColor != null) {
+					_text.color = txtColor.GetColor(ComponentState.Normal);
+				}
 				SetText(text);
 			}
 		}
@@ -55,11 +57,15 @@ namespace Sperlich.UISystem {
 		}
 		public void SetDisabled() {
 			State = ComponentState.Disabled;
-			_text.color = txtColor.GetColor(ComponentState.Disabled);
+			if (_text != null && txtColor != null) {
+				_text.color = txtColor.GetColor(ComponentState.Disabled);
+			}
 		}
 		public void SetEnabled() {
 			State = ComponentState.Normal;
-			_text.color = txtColor.GetColor(ComponentState.Normal);
+			if (_text != null && txtColor != null) {
+				_text.color = txtColor.GetColor(ComponentState.Normal);
+			}
 		}
 	}
 }
