@@ -3,22 +3,18 @@ using UnityEngine;
 namespace Sperlich.UISystem.Scroll
 {
     /// <summary>
-    /// Stellt reine mathematische Berechnungen für Virtualisierung zur Verfügung.
-    /// Unterstützt sowohl vertikale Einzellisten als auch mehrspaltige Grids.
+    /// Stellt mathematische Berechnungen für Virtualisierung zur Verfügung.
+    /// Unterstützt 1-spaltige vertikale Listen, 1-zeilige horizontale Listen, mehrspaltige vertikale Grids
+    /// sowie bidirektionale (2D) Grids.
     /// Entkoppelt von Unity-Komponenten für maximale Testbarkeit.
     /// </summary>
     public static class VirtualScrollMath
     {
+        #region 1D Vertical List
+
         /// <summary>
-        /// Berechnet die sichtbaren Indizes basierend auf der Scroll-Position für eine einspaltige vertikale Liste.
+        /// Berechnet die sichtbaren Indizes basierend auf der vertikalen Scroll-Position.
         /// </summary>
-        /// <param name="scrollOffset">Die aktuelle Scroll-Distanz in Pixeln (0 = ganz oben, positiv = nach unten).</param>
-        /// <param name="viewportHeight">Die sichtbare Höhe des Viewports in Pixeln.</param>
-        /// <param name="itemHeight">Die feste Höhe eines Elements in Pixeln.</param>
-        /// <param name="spacing">Der Abstand zwischen den Elementen in Pixeln.</param>
-        /// <param name="itemCount">Die Gesamtanzahl an Datensätzen.</param>
-        /// <param name="startIndex">Gibt den ersten sichtbaren Index (inklusive Buffer) zurück.</param>
-        /// <param name="endIndex">Gibt den letzten sichtbaren Index (inklusive Buffer) zurück.</param>
         public static void CalculateVisibleIndices(
             float scrollOffset, 
             float viewportHeight, 
@@ -36,7 +32,6 @@ namespace Sperlich.UISystem.Scroll
             }
 
             float totalItemSize = itemHeight + spacing;
-
             if (totalItemSize <= 0f)
             {
                 startIndex = 0;
@@ -52,16 +47,86 @@ namespace Sperlich.UISystem.Scroll
         }
 
         /// <summary>
-        /// Berechnet die sichtbaren Indizes für ein mehrspaltiges Grid.
+        /// Berechnet die Gesamthöhe des Contents (inklusive Spacing) für eine 1-spaltige vertikale Liste.
         /// </summary>
-        /// <param name="scrollOffset">Die vertikale Scroll-Position (positiv nach unten).</param>
-        /// <param name="viewportHeight">Die sichtbare Viewport-Höhe.</param>
-        /// <param name="itemHeight">Die feste Höhe eines Grid-Items.</param>
-        /// <param name="spacingY">Der vertikale Abstand zwischen Zeilen.</param>
-        /// <param name="columns">Die Anzahl der Spalten im Grid.</param>
-        /// <param name="itemCount">Die Gesamtanzahl der Elemente.</param>
-        /// <param name="startIndex">Erster sichtbarer Index (gepuffert).</param>
-        /// <param name="endIndex">Letzter sichtbarer Index (gepuffert).</param>
+        public static float CalculateContentHeight(int itemCount, float itemHeight, float spacing)
+        {
+            if (itemCount == 0) return 0f;
+            return (itemCount * itemHeight) + ((itemCount - 1) * spacing);
+        }
+
+        /// <summary>
+        /// Berechnet die absolute, lokale Y-Position eines Elements an einem bestimmten Index (1-spaltig).
+        /// </summary>
+        public static float CalculateLocalPositionY(int index, float itemHeight, float spacing)
+        {
+            float totalItemSize = itemHeight + spacing;
+            return -(index * totalItemSize);
+        }
+
+        #endregion
+
+        #region 1D Horizontal List
+
+        /// <summary>
+        /// Berechnet die sichtbaren Indizes basierend auf der horizontalen Scroll-Position.
+        /// </summary>
+        public static void CalculateHorizontalVisibleIndices(
+            float scrollOffset,
+            float viewportWidth,
+            float itemWidth,
+            float spacing,
+            int itemCount,
+            out int startIndex,
+            out int endIndex)
+        {
+            if (itemCount == 0)
+            {
+                startIndex = -1;
+                endIndex = -1;
+                return;
+            }
+
+            float totalItemSize = itemWidth + spacing;
+            if (totalItemSize <= 0f)
+            {
+                startIndex = 0;
+                endIndex = itemCount - 1;
+                return;
+            }
+
+            int rawStartIndex = Mathf.FloorToInt(scrollOffset / totalItemSize);
+            int visibleCount = Mathf.CeilToInt(viewportWidth / totalItemSize);
+
+            startIndex = Mathf.Clamp(rawStartIndex - 1, 0, itemCount - 1);
+            endIndex = Mathf.Clamp(rawStartIndex + visibleCount + 1, 0, itemCount - 1);
+        }
+
+        /// <summary>
+        /// Berechnet die Gesamtbreite des Contents für eine horizontale 1-Zeilen-Liste.
+        /// </summary>
+        public static float CalculateContentWidth(int itemCount, float itemWidth, float spacing)
+        {
+            if (itemCount == 0) return 0f;
+            return (itemCount * itemWidth) + ((itemCount - 1) * spacing);
+        }
+
+        /// <summary>
+        /// Berechnet die lokale X-Position eines Elements in einer horizontalen Liste.
+        /// </summary>
+        public static float CalculateLocalPositionX(int index, float itemWidth, float spacing)
+        {
+            float totalItemSize = itemWidth + spacing;
+            return index * totalItemSize;
+        }
+
+        #endregion
+
+        #region Column Grid (Vertical Scrolling)
+
+        /// <summary>
+        /// Berechnet die sichtbaren Indizes für ein mehrspaltiges, vertikal scrollendes Grid.
+        /// </summary>
         public static void CalculateGridVisibleIndices(
             float scrollOffset,
             float viewportHeight,
@@ -99,16 +164,7 @@ namespace Sperlich.UISystem.Scroll
         }
 
         /// <summary>
-        /// Berechnet die Gesamthöhe des Contents (inklusive Spacing) für eine 1-spaltige Liste.
-        /// </summary>
-        public static float CalculateContentHeight(int itemCount, float itemHeight, float spacing)
-        {
-            if (itemCount == 0) return 0f;
-            return (itemCount * itemHeight) + ((itemCount - 1) * spacing);
-        }
-
-        /// <summary>
-        /// Berechnet die Gesamthöhe des Contents für ein mehrspaltiges Grid.
+        /// Berechnet die Gesamthöhe des Contents für ein mehrspaltiges vertikales Grid.
         /// </summary>
         public static float CalculateGridContentHeight(int itemCount, float itemHeight, float spacingY, int columns)
         {
@@ -118,17 +174,7 @@ namespace Sperlich.UISystem.Scroll
         }
 
         /// <summary>
-        /// Berechnet die absolute, lokale Y-Position eines Elements an einem bestimmten Index (1-spaltig).
-        /// </summary>
-        public static float CalculateLocalPositionY(int index, float itemHeight, float spacing)
-        {
-            float totalItemSize = itemHeight + spacing;
-            return -(index * totalItemSize);
-        }
-
-        /// <summary>
         /// Berechnet die lokale 2D-Position (X, Y) eines Grid-Elements.
-        /// Geht von einem Top-Left Anchor aus.
         /// </summary>
         public static Vector2 CalculateGridLocalPosition(
             int index,
@@ -147,5 +193,56 @@ namespace Sperlich.UISystem.Scroll
 
             return new Vector2(x, y);
         }
+
+        #endregion
+
+        #region 2D Matrix Grid (Both Scrolling)
+
+        /// <summary>
+        /// Berechnet die 2D-Sichtbarkeitsgrenzen (Spalten und Zeilen) für ein 2D-Matrix-Grid.
+        /// </summary>
+        public static void Calculate2DGridVisibleBounds(
+            Vector2 scrollOffset,
+            Vector2 viewportSize,
+            Vector2 itemSize,
+            Vector2 spacing,
+            int totalColumns,
+            int totalRows,
+            out int startCol,
+            out int endCol,
+            out int startRow,
+            out int endRow)
+        {
+            if (totalColumns <= 0 || totalRows <= 0)
+            {
+                startCol = endCol = startRow = endRow = -1;
+                return;
+            }
+
+            Vector2 totalSize = itemSize + spacing;
+
+            int rawStartCol = Mathf.FloorToInt(scrollOffset.x / totalSize.x);
+            int visibleCols = Mathf.CeilToInt(viewportSize.x / totalSize.x);
+            startCol = Mathf.Clamp(rawStartCol - 1, 0, totalColumns - 1);
+            endCol = Mathf.Clamp(rawStartCol + visibleCols + 1, 0, totalColumns - 1);
+
+            int rawStartRow = Mathf.FloorToInt(scrollOffset.y / totalSize.y);
+            int visibleRows = Mathf.CeilToInt(viewportSize.y / totalSize.y);
+            startRow = Mathf.Clamp(rawStartRow - 1, 0, totalRows - 1);
+            endRow = Mathf.Clamp(rawStartRow + visibleRows + 1, 0, totalRows - 1);
+        }
+
+        /// <summary>
+        /// Berechnet die Gesamtgröße (Breite, Höhe) für ein 2D-Matrix-Grid.
+        /// </summary>
+        public static Vector2 Calculate2DGridContentSize(int columns, int rows, Vector2 itemSize, Vector2 spacing)
+        {
+            if (columns <= 0 || rows <= 0) return Vector2.zero;
+            float w = (columns * itemSize.x) + ((columns - 1) * spacing.x);
+            float h = (rows * itemSize.y) + ((rows - 1) * spacing.y);
+            return new Vector2(w, h);
+        }
+
+        #endregion
     }
 }

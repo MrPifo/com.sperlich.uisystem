@@ -18,7 +18,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
     /// Eine performante ScrollView ohne Pooling (für normale Menüs, Dialoge und Formulare).
     /// Nutzt direkt das Sperlich-Layout-System (z.B. FlexContainer oder GridContainer) für die Größenberechnung,
     /// ohne auf Unitys ContentSizeFitter angewiesen zu sein.
-    /// Unterstützt Kinetic Momentum-Scrolling, Elastic Bounce (Gummi-Band) und EventSystem-Input.
+    /// Unterstützt Kinetic Momentum-Scrolling in 2D, Elastic Bounce (Gummi-Band), EventSystem-Input
+    /// sowie interaktive Scrollbar Drag Handles.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     [AddComponentMenu("Sperlich UI/UI Elements/Scroll View")]
@@ -27,6 +28,10 @@ namespace Sperlich.UISystem.Conponents.UIElements
         [Header("References")]
         [Tooltip("Das RectTransform, das die scrollbaren Kind-Elemente oder Layout-Container enthält.")]
         public RectTransform ContentRect;
+
+        [Header("Scrollbars (Optional)")]
+        public UIScrollbar VerticalScrollbar;
+        public UIScrollbar HorizontalScrollbar;
 
         [Header("Scroll Direction")]
         public ScrollDirection Direction = ScrollDirection.Vertical;
@@ -55,12 +60,41 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             _viewportRect = GetComponent<RectTransform>();
             FetchLayoutContainer();
+            HookScrollbars();
         }
 
         private void OnEnable()
         {
             FetchLayoutContainer();
             UpdateContentSize();
+        }
+
+        private void HookScrollbars()
+        {
+            if (VerticalScrollbar != null)
+            {
+                VerticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
+            }
+            if (HorizontalScrollbar != null)
+            {
+                HorizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
+            }
+        }
+
+        private void OnVerticalScrollbarChanged(float ratio)
+        {
+            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - _viewportRect.rect.height);
+            _currentScroll.y = ratio * maxScrollY;
+            _velocity.y = 0f;
+            ApplyScrollPosition();
+        }
+
+        private void OnHorizontalScrollbarChanged(float ratio)
+        {
+            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - _viewportRect.rect.width);
+            _currentScroll.x = ratio * maxScrollX;
+            _velocity.x = 0f;
+            ApplyScrollPosition();
         }
 
         private void FetchLayoutContainer()
@@ -105,6 +139,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
                 ContentRect.sizeDelta = newSize;
             }
+
+            UpdateScrollbars();
         }
 
         private void Update()
@@ -158,6 +194,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 }
 
                 ApplyScrollPosition();
+                UpdateScrollbars();
             }
         }
 
@@ -186,10 +223,29 @@ namespace Sperlich.UISystem.Conponents.UIElements
             }
             if (Direction == ScrollDirection.Horizontal || Direction == ScrollDirection.Both)
             {
-                targetPos.x = -_currentScroll.x; // Negativ für Links-Verschiebung
+                targetPos.x = -_currentScroll.x;
             }
 
             ContentRect.anchoredPosition = targetPos;
+        }
+
+        private void UpdateScrollbars()
+        {
+            Vector2 maxScroll = GetMaxScroll();
+
+            if (VerticalScrollbar != null && maxScroll.y > 0f)
+            {
+                float ratio = _currentScroll.y / maxScroll.y;
+                float visibleRatio = _viewportRect.rect.height / ContentRect.rect.height;
+                VerticalScrollbar.SetScrollRatio(ratio, visibleRatio);
+            }
+
+            if (HorizontalScrollbar != null && maxScroll.x > 0f)
+            {
+                float ratio = _currentScroll.x / maxScroll.x;
+                float visibleRatio = _viewportRect.rect.width / ContentRect.rect.width;
+                HorizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
+            }
         }
 
         #region EventSystem Input
@@ -198,17 +254,23 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             _velocity = Vector2.zero;
 
-            if (Direction == ScrollDirection.Vertical || Direction == ScrollDirection.Both)
+            if (Direction == ScrollDirection.Vertical)
             {
                 _currentScroll.y -= eventData.scrollDelta.y * ScrollSensitivity;
             }
-            if (Direction == ScrollDirection.Horizontal)
+            else if (Direction == ScrollDirection.Horizontal)
             {
                 _currentScroll.x -= eventData.scrollDelta.y * ScrollSensitivity;
+            }
+            else if (Direction == ScrollDirection.Both)
+            {
+                _currentScroll.y -= eventData.scrollDelta.y * ScrollSensitivity;
+                _currentScroll.x -= eventData.scrollDelta.x * ScrollSensitivity;
             }
 
             if (!Elasticity) ClampScrollPosition();
             ApplyScrollPosition();
+            UpdateScrollbars();
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -221,17 +283,16 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             if (Direction == ScrollDirection.Vertical || Direction == ScrollDirection.Both)
             {
-                // Nach oben wischen (delta.y > 0) -> Liste scrollt nach unten (Offset steigt)
                 _currentScroll.y += eventData.delta.y;
             }
             if (Direction == ScrollDirection.Horizontal || Direction == ScrollDirection.Both)
             {
-                // Nach links wischen (delta.x < 0) -> Content wandert nach links (Offset steigt)
                 _currentScroll.x -= eventData.delta.x;
             }
 
             if (!Elasticity) ClampScrollPosition();
             ApplyScrollPosition();
+            UpdateScrollbars();
         }
 
         public void OnEndDrag(PointerEventData eventData)
