@@ -39,9 +39,9 @@ namespace Sperlich.UISystem {
 		void Update() {
 			if (IsOpen == false || UINavigator.IsNavigationActive == false) return;
 
-			if(InputSystem.Button(NavAction.TabRight)) {
+			if((UINavigator.InputProvider?.GetButton(NavAction.TabRight) ?? false)) {
 				MoveTabDirection(1);
-			} else if(InputSystem.Button(NavAction.TabLeft)) {
+			} else if((UINavigator.InputProvider?.GetButton(NavAction.TabLeft) ?? false)) {
 				MoveTabDirection(-1);
 			}
 		}

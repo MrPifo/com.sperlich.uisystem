@@ -9,7 +9,7 @@ namespace Sperlich.UISystem.Editor {
 	public class UINavigatorInspector : UnityEditor.Editor {
 		private SerializedProperty inputModuleProp;
 		private SerializedProperty eventSystemProp;
-		private SerializedProperty glyphProviderProp;
+		
 		private SerializedProperty controlBarProp;
 		private SerializedProperty navigationModeProp;
 		private SerializedProperty activeSelectionProp;
@@ -25,7 +25,7 @@ namespace Sperlich.UISystem.Editor {
 			targetUISystem = (UINavigator)target;
 			inputModuleProp = serializedObject.FindProperty("inputModule");
 			eventSystemProp = serializedObject.FindProperty("eventSystem");
-			glyphProviderProp = serializedObject.FindProperty("glyphProvider");
+			
 			controlBarProp = serializedObject.FindProperty("controlBar");
 			navigationModeProp = serializedObject.FindProperty("navigationMode");
 			activeSelectionProp = serializedObject.FindProperty("activeSelection");
@@ -43,7 +43,7 @@ namespace Sperlich.UISystem.Editor {
 			EditorGUI.indentLevel++;
 			ReadOnlyObjectField("Input Module", inputModuleProp.objectReferenceValue);
 			ReadOnlyObjectField("Event System", eventSystemProp.objectReferenceValue);
-			ReadOnlyObjectField("Glyph Provider", glyphProviderProp.objectReferenceValue);
+			
 			ReadOnlyObjectField("Control Bar", controlBarProp.objectReferenceValue);
 			EditorGUI.indentLevel--;
 

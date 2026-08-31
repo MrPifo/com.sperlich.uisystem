@@ -1,7 +1,7 @@
 using Cysharp.Threading.Tasks;
-using Rewired.Glyphs;
-using Rewired.Integration.UnityUI;
-using Sperlich.Input;
+
+
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,15 +13,15 @@ namespace Sperlich.UISystem {
 
 		[SerializeField]
 		[HideInInspector]
-		private UIStandaloneInputModule inputModule;
+		private BaseInputModule inputModule;
 
 		[SerializeField]
 		[HideInInspector]
-		private RewiredEventSystem eventSystem;
+		private EventSystem eventSystem;
 
 		[SerializeField]
 		[HideInInspector]
-		private GlyphProvider glyphProvider;
+		
 
 		[SerializeField]
 		[HideInInspector]
@@ -72,6 +72,7 @@ namespace Sperlich.UISystem {
 		public static bool IsEnabled => Instance.isDisabled == false && IsInactive == false;
 		public static bool IsNavigationActive => CooldownActive == false && IsEnabled && IsInactive == false;
 		private static UINavigator _instance;
+		public static IUIInputProvider InputProvider { get; set; }
 		private static InputSystemResources _resources;
 		public static UINavigator Instance {
 			get {
@@ -85,9 +86,9 @@ namespace Sperlich.UISystem {
 		public static ModalBase ActiveModal { get; private set; }
 		public static Navigator ActiveSelection { get => Instance.activeSelection; set => Instance.activeSelection = value; }
 		public static Navigator LastSelection { get => Instance.lastSelected; set => Instance.lastSelected = value; }
-		public static UIStandaloneInputModule InputModule => Instance.inputModule;
-		public static RewiredEventSystem EventSystem => Instance.eventSystem;
-		public static GlyphProvider GlyphProvider => Instance.glyphProvider;
+		public static BaseInputModule InputModule => Instance.inputModule;
+		public static EventSystem EventSystem => Instance.eventSystem;
+		
 		public static ControlBar ControlBar => Instance.controlBar;
 		public static InputSystemResources Resources {
 			get {
@@ -116,6 +117,7 @@ namespace Sperlich.UISystem {
 			FetchComponents();
 		}
 		void Update() {
+			if(InputProvider == null) return;
 			if (CooldownActive && firstUpdateCooldownPass == false) {
 				navCooldown = Mathf.Clamp(navCooldown - Time.unscaledDeltaTime, 0f, float.MaxValue);
 
@@ -132,9 +134,9 @@ namespace Sperlich.UISystem {
 
 			if (IsInactive) return;
 
-			bool mouseMoved = Mathf.Abs(InputSystem.Axis(NavAction.MouseHorizontal)) > 0 || Mathf.Abs(InputSystem.Axis(NavAction.MouseVertical)) > 0;
-			bool navActionPressed = Mathf.Abs(InputSystem.Axis(NavAction.NavigateHorizontal)) > 0 || Mathf.Abs(InputSystem.Axis(NavAction.NavigateVertical)) > 0;
-			bool mouseBtnClicked = InputSystem.ButtonDown(NavAction.MouseLM);
+			bool mouseMoved = Mathf.Abs(InputProvider.GetAxis(NavAction.MouseHorizontal)) > 0 || Mathf.Abs(InputProvider.GetAxis(NavAction.MouseVertical)) > 0;
+			bool navActionPressed = Mathf.Abs(InputProvider.GetAxis(NavAction.NavigateHorizontal)) > 0 || Mathf.Abs(InputProvider.GetAxis(NavAction.NavigateVertical)) > 0;
+			bool mouseBtnClicked = InputProvider.GetButtonDown(NavAction.MouseLM);
 
 			if(navigationMode == NavigationMode.Pointer && Cursor.visible == false && (mouseBtnClicked || mouseMoved)) {
 				ShowCursor();
@@ -152,9 +154,9 @@ namespace Sperlich.UISystem {
 				SetAnalogMode();
 			}
 
-			if (InputSystem.ButtonDown(NavAction.Submit)) {
+			if (InputProvider.GetButtonDown(NavAction.Submit)) {
 				ProcessSubmitAction();
-			} else if (InputSystem.ButtonDown(NavAction.Cancel)) {
+			} else if (InputProvider.GetButtonDown(NavAction.Cancel)) {
 				ProcessCancelAction();
 			}
 
@@ -163,7 +165,7 @@ namespace Sperlich.UISystem {
 			}
 			if (IsEnabled == false) return;
 
-			if (OnCooldown == false && disableReturn == false && disableNavigator == false && InputSystem.ButtonDown("Cancel")) {
+			if (OnCooldown == false && disableReturn == false && disableNavigator == false && InputProvider.GetButtonDown("Cancel")) {
 				if (currentMenu.CustomReturnAction != null) {
 					currentMenu.CustomReturnAction.Invoke();
 					TriggerCooldown(0.5f);
@@ -173,31 +175,31 @@ namespace Sperlich.UISystem {
 				}
 				return;
 			}
-			if (IsNavigateMode == false && (InputSystem.Button("NavigateUp") || InputSystem.Button("NavigateDown") || InputSystem.Button("NavigateRight") || InputSystem.Button("NavigateLeft") || InputSystem.Button("Cancel"))) {
+			if (IsNavigateMode == false && (InputProvider.GetButton("NavigateUp") || InputProvider.GetButton("NavigateDown") || InputProvider.GetButton("NavigateRight") || InputProvider.GetButton("NavigateLeft") || InputProvider.GetButton("Cancel"))) {
 				SetDigitalNavMode();
 				return;
 			}
-			if (IsNavigateMode == true && (InputSystem.MouseDelta.x != 0 || InputSystem.MouseDelta.y != 0)) {
+			if (IsNavigateMode == true && ((InputProvider.GetMouseDelta() ?? Vector2.zero).x != 0 || (InputProvider.GetMouseDelta() ?? Vector2.zero).y != 0)) {
 				SetAnalogMode();
 				return;
 			}
 
 			if (IsNavigateMode && oldcurrentSelected != null) {
-				if (InputSystem.Button("NavigateUp") && oldcurrentSelected.up != null) {
+				if (InputProvider.GetButton("NavigateUp") && oldcurrentSelected.up != null) {
 					oldSelect(oldcurrentSelected.up);
 				}
-				if (InputSystem.Button("NavigateDown") && oldcurrentSelected.down != null) {
+				if (InputProvider.GetButton("NavigateDown") && oldcurrentSelected.down != null) {
 					oldSelect(oldcurrentSelected.down);
 				}
-				if (InputSystem.Button("NavigateRight") && oldcurrentSelected.right != null) {
+				if (InputProvider.GetButton("NavigateRight") && oldcurrentSelected.right != null) {
 					oldSelect(oldcurrentSelected.right);
 				}
-				if (InputSystem.Button("NavigateLeft") && oldcurrentSelected.left != null) {
+				if (InputProvider.GetButton("NavigateLeft") && oldcurrentSelected.left != null) {
 					oldSelect(oldcurrentSelected.left);
 				}
 
 				if (oldcurrentSelected != null && DisablePressTimeout == false && disablePressUntilNextFrame == false) {
-					if (InputSystem.ButtonUp("Confirm")) {
+					if (InputProvider.GetButtonUp("Confirm")) {
 
 					}
 				}
@@ -220,10 +222,10 @@ namespace Sperlich.UISystem {
 		}
 		void FetchComponents() {
 			if (inputModule == null) {
-				inputModule = GetComponentInChildren<UIStandaloneInputModule>();
+				inputModule = GetComponentInChildren<BaseInputModule>();
 			}
 			if(eventSystem == null) {
-				eventSystem = GetComponentInChildren<RewiredEventSystem>();
+				eventSystem = GetComponentInChildren<EventSystem>();
 			}
 			if (glyphProvider == null) {
 				glyphProvider = GetComponentInChildren<GlyphProvider>();
