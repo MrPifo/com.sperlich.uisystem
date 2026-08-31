@@ -265,6 +265,7 @@ namespace Sperlich.UISystem.Testing
             {
                 grid.Columns.Add(GridTrack.Pixels(160f));
             }
+            grid.ImplicitRowTemplate = GridTrack.Pixels(120f);
             grid.Gap = new Vector2(10f, 10f);
             grid.Padding = new RectOffset(10, 10, 10, 10);
 
