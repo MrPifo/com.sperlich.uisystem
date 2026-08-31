@@ -116,7 +116,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             // Kinetic Scrolling (Momentum)
             if (!_isDragging && Mathf.Abs(_velocity) > 0.1f)
             {
-                _currentScrollY -= _velocity * Time.deltaTime;
+                _currentScrollY += _velocity * Time.deltaTime;
                 _velocity *= DecelerationRate; // Bremsen
 
                 if (Elasticity)
@@ -312,7 +312,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         public void OnDrag(PointerEventData eventData)
         {
-            _currentScrollY -= eventData.delta.y; 
+            // Finger/Maus nach oben ziehen (delta.y > 0) -> Liste scrollt nach unten (scrollOffset wird größer)
+            _currentScrollY += eventData.delta.y; 
             
             if (!Elasticity) ClampScrollPosition();
             
@@ -326,6 +327,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public void OnEndDrag(PointerEventData eventData)
         {
             _isDragging = false;
+            // Momentum in Drag-Richtung
             _velocity = eventData.delta.y / Time.deltaTime;
         }
 
