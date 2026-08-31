@@ -68,7 +68,7 @@ namespace Sperlich.UISystem {
 				ClearChildren(actionContainer);
 				callback?.Invoke();
 			} else {
-				await ActionCanvasGroup.DOFade(0f, FadeSpeed).SetEase(Ease.InOutCubic).AsyncWaitForCompletion();
+				await Tween.Alpha(ActionCanvasGroup, 0f, FadeSpeed, Ease.InOutCubic);
 				ClearChildren(actionContainer);
 				callback?.Invoke();
 			}
@@ -94,7 +94,7 @@ namespace Sperlich.UISystem {
 				}
 
 				if(fade) {
-					ActionCanvasGroup.DOFade(1f, FadeSpeed).SetEase(Ease.InOutCubic);
+					Tween.Alpha(ActionCanvasGroup, 1f, FadeSpeed, Ease.InOutCubic);
 				} else {
 					ActionCanvasGroup.alpha = 1f;
 				}
@@ -175,7 +175,7 @@ namespace Sperlich.UISystem {
 			if (canvasFadeTween.isAlive) {
 				canvasFadeTween.Stop();
 			}
-			canvasFadeTween = CanvasGroup.DOFade(1f, speed).SetEase(Ease.InOutSine).OnComplete(() => {
+			canvasFadeTween = Tween.Alpha(CanvasGroup, 1f, speed, Ease.InOutSine).OnComplete(() => {
 				CanvasGroup.interactable = true;
 				CanvasGroup.blocksRaycasts = true;
 			});
@@ -185,7 +185,7 @@ namespace Sperlich.UISystem {
 			if (canvasFadeTween.isAlive) {
 				canvasFadeTween.Stop();
 			}
-			canvasFadeTween = CanvasGroup.DOFade(0f, speed).SetEase(Ease.InOutSine).OnComplete(() => {
+			canvasFadeTween = Tween.Alpha(CanvasGroup, 0f, speed, Ease.InOutSine).OnComplete(() => {
 				CanvasGroup.interactable = false;
 				CanvasGroup.blocksRaycasts = false;
 			});

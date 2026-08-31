@@ -21,10 +21,6 @@ namespace Sperlich.UISystem {
 
 		[SerializeField]
 		[HideInInspector]
-		
-
-		[SerializeField]
-		[HideInInspector]
 		private ControlBar controlBar;
 
 		[Header("Navigator")]
@@ -224,13 +220,10 @@ namespace Sperlich.UISystem {
 			if (inputModule == null) {
 				inputModule = GetComponentInChildren<BaseInputModule>();
 			}
-			if(eventSystem == null) {
+			if (eventSystem == null) {
 				eventSystem = GetComponentInChildren<EventSystem>();
 			}
-			if (glyphProvider == null) {
-				glyphProvider = GetComponentInChildren<GlyphProvider>();
-			}
-			if(controlBar == null) {
+			if (controlBar == null) {
 				controlBar = FindFirstObjectByType<ControlBar>(FindObjectsInactive.Include);
 			}
 		}
@@ -430,3 +423,4 @@ namespace Sperlich.UISystem {
 #endif
 	}
 }
+

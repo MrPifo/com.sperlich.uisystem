@@ -91,7 +91,7 @@ namespace Sperlich.UISystem {
 			OnCloseBeginEvent.Invoke();
 
 			Tween.UIAnchoredPosition(modalTransform, new Vector2(0, -600), duration, Ease.OutSine);
-			Tween.PunchLocalRotation(modalTransform, new Vector3(0, 0, 8), duration, ease: Ease.InOutSine);
+			Tween.PunchLocalRotation(modalTransform, new Vector3(0, 0, 8), duration);
 			UINavigator.TriggerCooldown(duration);
 			UINavigator.RemoveActiveSubMenu(this);
 			canvasTween = Tween.Alpha(CanvasGroup, 0f, duration);
