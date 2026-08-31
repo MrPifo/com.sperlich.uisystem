@@ -423,32 +423,38 @@ namespace Sperlich.UISystem.Testing
             var trackImg = scrollbarGo.GetComponent<Image>();
             trackImg.color = new Color(0.05f, 0.06f, 0.08f, 0.6f);
 
+            var handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleGo.transform.SetParent(rt, false);
+            var handleRt = handleGo.GetComponent<RectTransform>();
+
             if (orientation == ScrollbarOrientation.Vertical)
             {
                 rt.anchorMin = new Vector2(1f, 0f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.offsetMin = new Vector2(topOrLeft.x, bottomOrRight.y);
-                rt.offsetMax = new Vector2(topOrLeft.x + 10f, topOrLeft.y);
+                rt.offsetMin = new Vector2(-22f, bottomOrRight.y);
+                rt.offsetMax = new Vector2(-12f, topOrLeft.y);
+
+                handleRt.anchorMin = new Vector2(0f, 1f);
+                handleRt.anchorMax = new Vector2(1f, 1f);
+                handleRt.pivot = new Vector2(0.5f, 1f);
+                handleRt.anchoredPosition = Vector2.zero;
+                handleRt.sizeDelta = new Vector2(0f, 40f);
             }
             else
             {
                 rt.anchorMin = new Vector2(0f, 0f);
                 rt.anchorMax = new Vector2(1f, 0f);
                 rt.pivot = new Vector2(0f, 0f);
-                rt.offsetMin = new Vector2(topOrLeft.x, topOrLeft.y);
-                rt.offsetMax = new Vector2(-bottomOrRight.x, topOrLeft.y + 10f);
-            }
+                rt.offsetMin = new Vector2(15f, 12f);
+                rt.offsetMax = new Vector2(-bottomOrRight.x, 22f);
 
-            // Handle (Thumb)
-            var handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
-            handleGo.transform.SetParent(rt, false);
-            var handleRt = handleGo.GetComponent<RectTransform>();
-            handleRt.anchorMin = new Vector2(0f, 1f);
-            handleRt.anchorMax = new Vector2(1f, 1f);
-            handleRt.pivot = new Vector2(0f, 1f);
-            handleRt.anchoredPosition = Vector2.zero;
-            handleRt.sizeDelta = new Vector2(0f, 40f);
+                handleRt.anchorMin = new Vector2(0f, 0f);
+                handleRt.anchorMax = new Vector2(0f, 1f);
+                handleRt.pivot = new Vector2(0f, 0.5f);
+                handleRt.anchoredPosition = Vector2.zero;
+                handleRt.sizeDelta = new Vector2(40f, 0f);
+            }
 
             var handleImg = handleGo.GetComponent<Image>();
             handleImg.color = new Color(1f, 1f, 1f, 0.35f);

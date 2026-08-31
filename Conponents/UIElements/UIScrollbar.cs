@@ -71,28 +71,33 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
             _currentRatio = Mathf.Clamp01(scrollRatio);
 
-            // Handle-Größe anpassen
             if (Orientation == ScrollbarOrientation.Vertical)
             {
                 float trackHeight = Track.rect.height;
-                float handleHeight = Mathf.Max(MinHandleSize, trackHeight * Mathf.Clamp01(visibleRatio));
-                Handle.sizeDelta = new Vector2(Handle.sizeDelta.x, handleHeight);
+                float handleHeight = Mathf.Clamp(trackHeight * Mathf.Clamp01(visibleRatio), MinHandleSize, trackHeight);
 
-                // Handle-Position berechnen (Top = 0, Bottom = trackHeight - handleHeight)
+                Handle.anchorMin = new Vector2(0f, 1f);
+                Handle.anchorMax = new Vector2(1f, 1f);
+                Handle.pivot = new Vector2(0.5f, 1f);
+                Handle.sizeDelta = new Vector2(0f, handleHeight);
+
                 float travelDistance = Mathf.Max(0f, trackHeight - handleHeight);
                 float posY = -(_currentRatio * travelDistance);
-                Handle.anchoredPosition = new Vector2(Handle.anchoredPosition.x, posY);
+                Handle.anchoredPosition = new Vector2(0f, posY);
             }
             else
             {
                 float trackWidth = Track.rect.width;
-                float handleWidth = Mathf.Max(MinHandleSize, trackWidth * Mathf.Clamp01(visibleRatio));
-                Handle.sizeDelta = new Vector2(handleWidth, Handle.sizeDelta.y);
+                float handleWidth = Mathf.Clamp(trackWidth * Mathf.Clamp01(visibleRatio), MinHandleSize, trackWidth);
 
-                // Handle-Position berechnen (Left = 0, Right = trackWidth - handleWidth)
+                Handle.anchorMin = new Vector2(0f, 0f);
+                Handle.anchorMax = new Vector2(0f, 1f);
+                Handle.pivot = new Vector2(0f, 0.5f);
+                Handle.sizeDelta = new Vector2(handleWidth, 0f);
+
                 float travelDistance = Mathf.Max(0f, trackWidth - handleWidth);
                 float posX = _currentRatio * travelDistance;
-                Handle.anchoredPosition = new Vector2(posX, Handle.anchoredPosition.y);
+                Handle.anchoredPosition = new Vector2(posX, 0f);
             }
         }
 
@@ -115,7 +120,6 @@ namespace Sperlich.UISystem.Conponents.UIElements
             _isPressed = true;
             AnimateToColor(PressColor);
 
-            // Wenn auf den Track geklickt wird, sofort dorthin springen
             UpdateRatioFromPointer(eventData);
         }
 
@@ -142,10 +146,13 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 float handleHeight = Handle.rect.height;
                 float travel = Mathf.Max(1f, trackHeight - handleHeight);
 
-                // localPoint.y ist 0 oben, -trackHeight unten (bei Pivot 0.5, 1)
-                float currentY = -localPoint.y - (handleHeight / 2f);
-                float ratio = Mathf.Clamp01(currentY / travel);
-                OnScrollValueChanged.Invoke(ratio);
+                // localPoint.y: Track.rect.yMax (oben) bis Track.rect.yMin (unten)
+                float topY = Track.rect.yMax - (handleHeight / 2f);
+                float bottomY = Track.rect.yMin + (handleHeight / 2f);
+
+                float ratio = Mathf.InverseLerp(topY, bottomY, localPoint.y);
+                _currentRatio = Mathf.Clamp01(ratio);
+                OnScrollValueChanged.Invoke(_currentRatio);
             }
             else
             {
@@ -153,9 +160,12 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 float handleWidth = Handle.rect.width;
                 float travel = Mathf.Max(1f, trackWidth - handleWidth);
 
-                float currentX = localPoint.x - (handleWidth / 2f);
-                float ratio = Mathf.Clamp01(currentX / travel);
-                OnScrollValueChanged.Invoke(ratio);
+                float leftX = Track.rect.xMin + (handleWidth / 2f);
+                float rightX = Track.rect.xMax - (handleWidth / 2f);
+
+                float ratio = Mathf.InverseLerp(leftX, rightX, localPoint.x);
+                _currentRatio = Mathf.Clamp01(ratio);
+                OnScrollValueChanged.Invoke(_currentRatio);
             }
         }
 

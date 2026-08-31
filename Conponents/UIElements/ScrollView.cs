@@ -30,8 +30,34 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public RectTransform ContentRect;
 
         [Header("Scrollbars (Optional)")]
-        public UIScrollbar VerticalScrollbar;
-        public UIScrollbar HorizontalScrollbar;
+        [SerializeField] private UIScrollbar _verticalScrollbar;
+        [SerializeField] private UIScrollbar _horizontalScrollbar;
+
+        public UIScrollbar VerticalScrollbar
+        {
+            get => _verticalScrollbar;
+            set
+            {
+                if (_verticalScrollbar != null)
+                    _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+                _verticalScrollbar = value;
+                if (_verticalScrollbar != null)
+                    _verticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
+            }
+        }
+
+        public UIScrollbar HorizontalScrollbar
+        {
+            get => _horizontalScrollbar;
+            set
+            {
+                if (_horizontalScrollbar != null)
+                    _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
+                _horizontalScrollbar = value;
+                if (_horizontalScrollbar != null)
+                    _horizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
+            }
+        }
 
         [Header("Scroll Direction")]
         public ScrollDirection Direction = ScrollDirection.Vertical;
@@ -47,7 +73,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public float DecelerationRate = 0.95f;
         [Tooltip("Verhindert hartes Anschlagen und ermöglicht ein sanftes Zurückfedern an den Rändern.")]
         public bool Elasticity = true;
-        public float ElasticityFactor = 0.1f;
+        public float MaxOverscrollDistance = 100f;
+        public float ElasticityBounceSpeed = 15f;
 
         private RectTransform _viewportRect;
         private Vector2 _currentScroll = Vector2.zero; // X = horizontaler Offset, Y = vertikaler Offset
@@ -60,25 +87,31 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             _viewportRect = GetComponent<RectTransform>();
             FetchLayoutContainer();
-            HookScrollbars();
         }
 
         private void OnEnable()
         {
             FetchLayoutContainer();
             UpdateContentSize();
+
+            if (_verticalScrollbar != null)
+            {
+                _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+                _verticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
+            }
+            if (_horizontalScrollbar != null)
+            {
+                _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
+                _horizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
+            }
         }
 
-        private void HookScrollbars()
+        private void OnDisable()
         {
-            if (VerticalScrollbar != null)
-            {
-                VerticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
-            }
-            if (HorizontalScrollbar != null)
-            {
-                HorizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
-            }
+            if (_verticalScrollbar != null)
+                _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+            if (_horizontalScrollbar != null)
+                _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
         }
 
         private void OnVerticalScrollbarChanged(float ratio)
@@ -152,47 +185,64 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 UpdateContentSize();
             }
 
-            // Kinetic Scrolling (Momentum)
+            Vector2 maxScroll = GetMaxScroll();
+
+            // 1. Kinetic Momentum (wenn nicht gedraggt wird)
             if (!_isDragging && _velocity.sqrMagnitude > 0.01f)
             {
                 _currentScroll += _velocity * Time.deltaTime;
                 _velocity *= DecelerationRate;
 
-                Vector2 maxScroll = GetMaxScroll();
-
-                if (Elasticity)
-                {
-                    // Vertikales Zurückfedern
-                    if (_currentScroll.y < 0f)
-                    {
-                        _currentScroll.y = Mathf.Lerp(_currentScroll.y, 0f, ElasticityFactor);
-                        _velocity.y = 0f;
-                    }
-                    else if (_currentScroll.y > maxScroll.y)
-                    {
-                        _currentScroll.y = Mathf.Lerp(_currentScroll.y, maxScroll.y, ElasticityFactor);
-                        _velocity.y = 0f;
-                    }
-
-                    // Horizontales Zurückfedern
-                    if (_currentScroll.x < 0f)
-                    {
-                        _currentScroll.x = Mathf.Lerp(_currentScroll.x, 0f, ElasticityFactor);
-                        _velocity.x = 0f;
-                    }
-                    else if (_currentScroll.x > maxScroll.x)
-                    {
-                        _currentScroll.x = Mathf.Lerp(_currentScroll.x, maxScroll.x, ElasticityFactor);
-                        _velocity.x = 0f;
-                    }
-                }
-                else
+                if (!Elasticity)
                 {
                     ClampScrollPosition();
                     if (_currentScroll.y <= 0f || _currentScroll.y >= maxScroll.y) _velocity.y = 0f;
                     if (_currentScroll.x <= 0f || _currentScroll.x >= maxScroll.x) _velocity.x = 0f;
                 }
+            }
 
+            // 2. Elastic Bounce-Back (Federung zurück in die Grenzen)
+            if (!_isDragging && Elasticity)
+            {
+                bool needReposition = false;
+
+                // Y-Achse
+                if (_currentScroll.y < 0f)
+                {
+                    _currentScroll.y = Mathf.MoveTowards(_currentScroll.y, 0f, Mathf.Max(120f, Mathf.Abs(_currentScroll.y) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.y = 0f;
+                    needReposition = true;
+                }
+                else if (_currentScroll.y > maxScroll.y)
+                {
+                    _currentScroll.y = Mathf.MoveTowards(_currentScroll.y, maxScroll.y, Mathf.Max(120f, Mathf.Abs(_currentScroll.y - maxScroll.y) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.y = 0f;
+                    needReposition = true;
+                }
+
+                // X-Achse
+                if (_currentScroll.x < 0f)
+                {
+                    _currentScroll.x = Mathf.MoveTowards(_currentScroll.x, 0f, Mathf.Max(120f, Mathf.Abs(_currentScroll.x) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.x = 0f;
+                    needReposition = true;
+                }
+                else if (_currentScroll.x > maxScroll.x)
+                {
+                    _currentScroll.x = Mathf.MoveTowards(_currentScroll.x, maxScroll.x, Mathf.Max(120f, Mathf.Abs(_currentScroll.x - maxScroll.x) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.x = 0f;
+                    needReposition = true;
+                }
+
+                if (needReposition)
+                {
+                    ApplyScrollPosition();
+                    UpdateScrollbars();
+                }
+            }
+
+            if (!_isDragging && _velocity.sqrMagnitude > 0.01f)
+            {
                 ApplyScrollPosition();
                 UpdateScrollbars();
             }
@@ -233,18 +283,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             Vector2 maxScroll = GetMaxScroll();
 
-            if (VerticalScrollbar != null && maxScroll.y > 0f)
+            if (_verticalScrollbar != null && maxScroll.y > 0f)
             {
                 float ratio = _currentScroll.y / maxScroll.y;
                 float visibleRatio = _viewportRect.rect.height / ContentRect.rect.height;
-                VerticalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
 
-            if (HorizontalScrollbar != null && maxScroll.x > 0f)
+            if (_horizontalScrollbar != null && maxScroll.x > 0f)
             {
                 float ratio = _currentScroll.x / maxScroll.x;
                 float visibleRatio = _viewportRect.rect.width / ContentRect.rect.width;
-                HorizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
         }
 
@@ -268,7 +318,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 _currentScroll.x -= eventData.scrollDelta.x * ScrollSensitivity;
             }
 
-            if (!Elasticity) ClampScrollPosition();
+            ClampScrollPosition();
             ApplyScrollPosition();
             UpdateScrollbars();
         }
@@ -281,16 +331,22 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         public void OnDrag(PointerEventData eventData)
         {
+            Vector2 maxScroll = GetMaxScroll();
+            float overscrollLimit = Elasticity ? MaxOverscrollDistance : 0f;
+
             if (Direction == ScrollDirection.Vertical || Direction == ScrollDirection.Both)
             {
                 _currentScroll.y += eventData.delta.y;
+                _currentScroll.y = Mathf.Clamp(_currentScroll.y, -overscrollLimit, maxScroll.y + overscrollLimit);
             }
             if (Direction == ScrollDirection.Horizontal || Direction == ScrollDirection.Both)
             {
                 _currentScroll.x -= eventData.delta.x;
+                _currentScroll.x = Mathf.Clamp(_currentScroll.x, -overscrollLimit, maxScroll.x + overscrollLimit);
             }
 
             if (!Elasticity) ClampScrollPosition();
+
             ApplyScrollPosition();
             UpdateScrollbars();
         }

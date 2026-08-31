@@ -30,8 +30,34 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public RectTransform ContentRect;
 
         [Header("Scrollbars (Optional)")]
-        public UIScrollbar VerticalScrollbar;
-        public UIScrollbar HorizontalScrollbar;
+        [SerializeField] private UIScrollbar _verticalScrollbar;
+        [SerializeField] private UIScrollbar _horizontalScrollbar;
+
+        public UIScrollbar VerticalScrollbar
+        {
+            get => _verticalScrollbar;
+            set
+            {
+                if (_verticalScrollbar != null)
+                    _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+                _verticalScrollbar = value;
+                if (_verticalScrollbar != null)
+                    _verticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
+            }
+        }
+
+        public UIScrollbar HorizontalScrollbar
+        {
+            get => _horizontalScrollbar;
+            set
+            {
+                if (_horizontalScrollbar != null)
+                    _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
+                _horizontalScrollbar = value;
+                if (_horizontalScrollbar != null)
+                    _horizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
+            }
+        }
 
         [Header("Layout Mode")]
         public VirtualScrollMode Mode = VirtualScrollMode.VerticalList;
@@ -53,9 +79,10 @@ namespace Sperlich.UISystem.Conponents.UIElements
         [Tooltip("Wie stark das Nachscrollen (Momentum) abgebremst wird. (0 = sofortiger Stopp, nahe 1 = langes Gleiten)")]
         [Range(0.1f, 0.99f)]
         public float DecelerationRate = 0.95f;
-        [Tooltip("Verhindert hartes Anschlagen und federt an den Rändern zurück.")]
+        [Tooltip("Verhindert hartes Anschlagen und federt an den Rändern sanft zurück.")]
         public bool Elasticity = true;
-        public float ElasticityFactor = 0.1f;
+        public float MaxOverscrollDistance = 100f;
+        public float ElasticityBounceSpeed = 15f;
 
         private IVirtualScrollAdapter _adapter;
         private VirtualScrollAnimator _animator;
@@ -65,30 +92,35 @@ namespace Sperlich.UISystem.Conponents.UIElements
         private Vector2 _velocity = Vector2.zero;
         private bool _isDragging = false;
 
-        private int _lastStartIndex = -1;
-        private int _lastEndIndex = -1;
         private int _lastItemCount = -1;
-
         private Dictionary<int, RectTransform> _activeItems = new Dictionary<int, RectTransform>();
 
         private void Awake()
         {
             _viewportRect = GetComponent<RectTransform>();
             _animator = GetComponent<VirtualScrollAnimator>();
-
-            HookScrollbars();
         }
 
-        private void HookScrollbars()
+        private void OnEnable()
         {
-            if (VerticalScrollbar != null)
+            if (_verticalScrollbar != null)
             {
-                VerticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
+                _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+                _verticalScrollbar.OnScrollValueChanged.AddListener(OnVerticalScrollbarChanged);
             }
-            if (HorizontalScrollbar != null)
+            if (_horizontalScrollbar != null)
             {
-                HorizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
+                _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
+                _horizontalScrollbar.OnScrollValueChanged.AddListener(OnHorizontalScrollbarChanged);
             }
+        }
+
+        private void OnDisable()
+        {
+            if (_verticalScrollbar != null)
+                _verticalScrollbar.OnScrollValueChanged.RemoveListener(OnVerticalScrollbarChanged);
+            if (_horizontalScrollbar != null)
+                _horizontalScrollbar.OnScrollValueChanged.RemoveListener(OnHorizontalScrollbarChanged);
         }
 
         private void OnVerticalScrollbarChanged(float ratio)
@@ -126,7 +158,6 @@ namespace Sperlich.UISystem.Conponents.UIElements
             if (_adapter == null || ContentRect == null) return;
 
             _lastItemCount = _adapter.GetItemCount();
-            
             Vector2 contentSize = ContentRect.sizeDelta;
 
             switch (Mode)
@@ -160,47 +191,65 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             if (_adapter == null || ContentRect == null || _viewportRect == null) return;
 
-            // Kinetic Scrolling (Momentum)
+            Vector2 maxScroll = GetMaxScroll();
+
+            // 1. Kinetic Momentum (wenn nicht gedraggt wird)
             if (!_isDragging && _velocity.sqrMagnitude > 0.01f)
             {
                 _currentScroll += _velocity * Time.deltaTime;
                 _velocity *= DecelerationRate;
 
-                Vector2 maxScroll = GetMaxScroll();
-
-                if (Elasticity)
-                {
-                    // Vertikales Zurückfedern
-                    if (_currentScroll.y < 0f)
-                    {
-                        _currentScroll.y = Mathf.Lerp(_currentScroll.y, 0f, ElasticityFactor);
-                        _velocity.y = 0f;
-                    }
-                    else if (_currentScroll.y > maxScroll.y)
-                    {
-                        _currentScroll.y = Mathf.Lerp(_currentScroll.y, maxScroll.y, ElasticityFactor);
-                        _velocity.y = 0f;
-                    }
-
-                    // Horizontales Zurückfedern
-                    if (_currentScroll.x < 0f)
-                    {
-                        _currentScroll.x = Mathf.Lerp(_currentScroll.x, 0f, ElasticityFactor);
-                        _velocity.x = 0f;
-                    }
-                    else if (_currentScroll.x > maxScroll.x)
-                    {
-                        _currentScroll.x = Mathf.Lerp(_currentScroll.x, maxScroll.x, ElasticityFactor);
-                        _velocity.x = 0f;
-                    }
-                }
-                else
+                if (!Elasticity)
                 {
                     ClampScrollPosition();
                     if (_currentScroll.y <= 0f || _currentScroll.y >= maxScroll.y) _velocity.y = 0f;
                     if (_currentScroll.x <= 0f || _currentScroll.x >= maxScroll.x) _velocity.x = 0f;
                 }
+            }
 
+            // 2. Elastic Bounce-Back (Federung zurück in die Grenzen)
+            if (!_isDragging && Elasticity)
+            {
+                bool needReposition = false;
+
+                // Y-Achse
+                if (_currentScroll.y < 0f)
+                {
+                    _currentScroll.y = Mathf.MoveTowards(_currentScroll.y, 0f, Mathf.Max(120f, Mathf.Abs(_currentScroll.y) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.y = 0f;
+                    needReposition = true;
+                }
+                else if (_currentScroll.y > maxScroll.y)
+                {
+                    _currentScroll.y = Mathf.MoveTowards(_currentScroll.y, maxScroll.y, Mathf.Max(120f, Mathf.Abs(_currentScroll.y - maxScroll.y) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.y = 0f;
+                    needReposition = true;
+                }
+
+                // X-Achse
+                if (_currentScroll.x < 0f)
+                {
+                    _currentScroll.x = Mathf.MoveTowards(_currentScroll.x, 0f, Mathf.Max(120f, Mathf.Abs(_currentScroll.x) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.x = 0f;
+                    needReposition = true;
+                }
+                else if (_currentScroll.x > maxScroll.x)
+                {
+                    _currentScroll.x = Mathf.MoveTowards(_currentScroll.x, maxScroll.x, Mathf.Max(120f, Mathf.Abs(_currentScroll.x - maxScroll.x) * ElasticityBounceSpeed) * Time.deltaTime);
+                    _velocity.x = 0f;
+                    needReposition = true;
+                }
+
+                if (needReposition)
+                {
+                    ApplyScrollPosition();
+                    RefreshVisibleItems();
+                    UpdateScrollbars();
+                }
+            }
+
+            if (!_isDragging && _velocity.sqrMagnitude > 0.01f)
+            {
                 ApplyScrollPosition();
                 RefreshVisibleItems();
                 UpdateScrollbars();
@@ -231,18 +280,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             Vector2 maxScroll = GetMaxScroll();
 
-            if (VerticalScrollbar != null && maxScroll.y > 0f)
+            if (_verticalScrollbar != null && maxScroll.y > 0f)
             {
                 float ratio = _currentScroll.y / maxScroll.y;
                 float visibleRatio = _viewportRect.rect.height / ContentRect.rect.height;
-                VerticalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
 
-            if (HorizontalScrollbar != null && maxScroll.x > 0f)
+            if (_horizontalScrollbar != null && maxScroll.x > 0f)
             {
                 float ratio = _currentScroll.x / maxScroll.x;
                 float visibleRatio = _viewportRect.rect.width / ContentRect.rect.width;
-                HorizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
         }
 
@@ -259,13 +308,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 return;
             }
 
+            // Für die Index-Berechnung clampen wir die Offsets, damit auch beim Overscrollen keine negativen/falschen Indizes geladen werden
+            Vector2 maxScroll = GetMaxScroll();
+            float safeScrollY = Mathf.Clamp(_currentScroll.y, 0f, maxScroll.y);
+            float safeScrollX = Mathf.Clamp(_currentScroll.x, 0f, maxScroll.x);
+
             HashSet<int> neededIndices = new HashSet<int>();
 
             switch (Mode)
             {
                 case VirtualScrollMode.VerticalList:
                     VirtualScrollMath.CalculateVisibleIndices(
-                        _currentScroll.y, 
+                        safeScrollY, 
                         _viewportRect.rect.height, 
                         ItemSize1D, 
                         Spacing1D, 
@@ -277,7 +331,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
                 case VirtualScrollMode.HorizontalList:
                     VirtualScrollMath.CalculateHorizontalVisibleIndices(
-                        _currentScroll.x, 
+                        safeScrollX, 
                         _viewportRect.rect.width, 
                         ItemSize1D, 
                         Spacing1D, 
@@ -289,7 +343,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
                 case VirtualScrollMode.Grid:
                     VirtualScrollMath.CalculateGridVisibleIndices(
-                        _currentScroll.y, 
+                        safeScrollY, 
                         _viewportRect.rect.height, 
                         GridItemSize.y, 
                         GridSpacing.y, 
@@ -302,7 +356,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
                 case VirtualScrollMode.Grid2D:
                     VirtualScrollMath.Calculate2DGridVisibleBounds(
-                        _currentScroll, 
+                        new Vector2(safeScrollX, safeScrollY), 
                         _viewportRect.rect.size, 
                         GridItemSize, 
                         GridSpacing, 
@@ -454,7 +508,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 _currentScroll.x -= eventData.scrollDelta.x * ScrollSensitivity;
             }
 
-            if (!Elasticity) ClampScrollPosition();
+            ClampScrollPosition();
             ApplyScrollPosition();
             RefreshVisibleItems();
             UpdateScrollbars();
@@ -468,16 +522,22 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         public void OnDrag(PointerEventData eventData)
         {
+            Vector2 maxScroll = GetMaxScroll();
+            float overscrollLimit = Elasticity ? MaxOverscrollDistance : 0f;
+
             if (Mode == VirtualScrollMode.VerticalList || Mode == VirtualScrollMode.Grid || Mode == VirtualScrollMode.Grid2D)
             {
                 _currentScroll.y += eventData.delta.y;
+                _currentScroll.y = Mathf.Clamp(_currentScroll.y, -overscrollLimit, maxScroll.y + overscrollLimit);
             }
             if (Mode == VirtualScrollMode.HorizontalList || Mode == VirtualScrollMode.Grid2D)
             {
                 _currentScroll.x -= eventData.delta.x;
+                _currentScroll.x = Mathf.Clamp(_currentScroll.x, -overscrollLimit, maxScroll.x + overscrollLimit);
             }
 
             if (!Elasticity) ClampScrollPosition();
+
             ApplyScrollPosition();
             RefreshVisibleItems();
             UpdateScrollbars();
