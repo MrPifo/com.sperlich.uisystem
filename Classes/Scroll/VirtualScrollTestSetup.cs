@@ -15,7 +15,9 @@ namespace Sperlich.UISystem.Testing
         /// <summary>1-spaltige vertikale Liste mit 1.000 Items (z.B. Leaderboard/Chat-Log).</summary>
         VerticalList1000 = 0,
         /// <summary>4-spaltiges Grid mit 1.000 Items (z.B. Inventar/Kartengalerie).</summary>
-        GridList1000 = 1
+        GridList1000 = 1,
+        /// <summary>Standard-ScrollView OHNE Pooling (nutzt FlexContainer für automatische Layout-Größe).</summary>
+        StandardFlexScrollView = 2
     }
 
     /// <summary>
@@ -99,6 +101,9 @@ namespace Sperlich.UISystem.Testing
                 case VirtualScrollTestPreset.GridList1000:
                     BuildGridListSetup();
                     break;
+                case VirtualScrollTestPreset.StandardFlexScrollView:
+                    BuildStandardFlexScrollViewSetup();
+                    break;
             }
         }
 
@@ -170,6 +175,85 @@ namespace Sperlich.UISystem.Testing
             currentAdapter = panel.gameObject.AddComponent<SimpleTestScrollAdapter>();
             currentAdapter.Initialize(m_totalItems, isGrid: true);
             scrollView.SetAdapter(currentAdapter);
+        }
+
+        private void BuildStandardFlexScrollViewSetup()
+        {
+            // Panel erstellen
+            var panel = CreateCardPanel("Standard ScrollView + FlexContainer (No Pooling, 15 Items)", new Vector2(520f, 700f));
+
+            // Viewport
+            var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask), typeof(ScrollView));
+            viewportGo.transform.SetParent(panel, false);
+
+            var vpRt = viewportGo.GetComponent<RectTransform>();
+            vpRt.anchorMin = new Vector2(0f, 0f);
+            vpRt.anchorMax = new Vector2(1f, 1f);
+            vpRt.offsetMin = new Vector2(15f, 15f);
+            vpRt.offsetMax = new Vector2(-15f, -55f);
+
+            var vpImg = viewportGo.GetComponent<Image>();
+            vpImg.color = new Color(0.08f, 0.09f, 0.12f, 1f);
+
+            var mask = viewportGo.GetComponent<Mask>();
+            mask.showMaskGraphic = true;
+
+            // Content Container mit FlexContainer (Sperlich Layout System)
+            var contentGo = new GameObject("Content", typeof(RectTransform), typeof(FlexContainer));
+            contentGo.transform.SetParent(vpRt, false);
+
+            var contentRt = contentGo.GetComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot = new Vector2(0.5f, 1f);
+            contentRt.anchoredPosition = Vector2.zero;
+
+            var flex = contentGo.GetComponent<FlexContainer>();
+            flex.Direction = FlexDirection.Column;
+            flex.Gap = new Vector2(0f, 8f);
+            flex.Padding = new RectOffset(5, 5, 5, 5);
+
+            var scrollView = viewportGo.GetComponent<ScrollView>();
+            scrollView.ContentRect = contentRt;
+            scrollView.Direction = ScrollDirection.Vertical;
+            scrollView.AutoSizeFromLayout = true;
+
+            // 15 echte statische Kind-Elemente erzeugen (kein Pooling)
+            for (int i = 0; i < 15; i++)
+            {
+                var card = CreateStaticCard(contentRt, i);
+            }
+        }
+
+        private GameObject CreateStaticCard(RectTransform parent, int index)
+        {
+            var cardGo = new GameObject($"Card_{index + 1}", typeof(RectTransform), typeof(Image), typeof(FlexElement));
+            cardGo.transform.SetParent(parent, false);
+
+            var rt = cardGo.GetComponent<RectTransform>();
+            var img = cardGo.GetComponent<Image>();
+            float hue = (index * 17 % 100) / 100f;
+            img.color = Color.HSVToRGB(hue, 0.6f, 0.3f);
+
+            var flexEl = cardGo.GetComponent<FlexElement>();
+            flexEl.Height = FlexSize.Pixels(55f);
+            flexEl.Width = FlexSize.Percent(100f);
+
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textGo.transform.SetParent(rt, false);
+            var textRt = textGo.GetComponent<RectTransform>();
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = new Vector2(15f, 0f);
+            textRt.offsetMax = new Vector2(-15f, 0f);
+
+            var tmp = textGo.GetComponent<TextMeshProUGUI>();
+            tmp.text = $"Standard Card #{index + 1} (Static Flex Child)";
+            tmp.fontSize = 15f;
+            tmp.color = Color.white;
+            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+
+            return cardGo;
         }
 
         #endregion
