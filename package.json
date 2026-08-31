@@ -20,6 +20,8 @@
   ],
   "dependencies": {
     "com.sperlich.layout": "https://github.com/MrPifo/com.sperlich.layout.git",
-    "com.sperlich.prefabmanager": "https://github.com/MrPifo/com.sperlich.prefabmanager.git"
+    "com.sperlich.prefabmanager": "https://github.com/MrPifo/com.sperlich.prefabmanager.git",
+    "com.kyrylokuzyk.primetween": "https://github.com/KyryloKuzyk/PrimeTween.git",
+    "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
   }
 }
