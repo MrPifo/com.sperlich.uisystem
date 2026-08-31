@@ -1,0 +1,18 @@
+{
+    "name": "Sperlich.UISystem.ColorTheme.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:bb3bfea11214b2c478b811c5e4791746"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,22 @@
+{
+    "name": "UISystem.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:bb3bfea11214b2c478b811c5e4791746",
+        "GUID:df228fa4bfdb86445bc7125a8db2b370",
+        "GUID:cf543715d3cda154abb960949704e03d",
+        "GUID:37124e22ec38e6e47b2e7a1ec93856ef",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
