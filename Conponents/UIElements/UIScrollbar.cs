@@ -144,7 +144,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             {
                 float trackHeight = Track.rect.height;
                 float handleHeight = Handle.rect.height;
-                float travel = Mathf.Max(1f, trackHeight - handleHeight);
+                float travel = Mathf.Max(0f, trackHeight - handleHeight);
 
                 // localPoint.y: Track.rect.yMax (oben) bis Track.rect.yMin (unten)
                 float topY = Track.rect.yMax - (handleHeight / 2f);
@@ -152,19 +152,27 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
                 float ratio = Mathf.InverseLerp(topY, bottomY, localPoint.y);
                 _currentRatio = Mathf.Clamp01(ratio);
+
+                float posY = -(_currentRatio * travel);
+                Handle.anchoredPosition = new Vector2(0f, posY);
+
                 OnScrollValueChanged.Invoke(_currentRatio);
             }
             else
             {
                 float trackWidth = Track.rect.width;
                 float handleWidth = Handle.rect.width;
-                float travel = Mathf.Max(1f, trackWidth - handleWidth);
+                float travel = Mathf.Max(0f, trackWidth - handleWidth);
 
                 float leftX = Track.rect.xMin + (handleWidth / 2f);
                 float rightX = Track.rect.xMax - (handleWidth / 2f);
 
                 float ratio = Mathf.InverseLerp(leftX, rightX, localPoint.x);
                 _currentRatio = Mathf.Clamp01(ratio);
+
+                float posX = _currentRatio * travel;
+                Handle.anchoredPosition = new Vector2(posX, 0f);
+
                 OnScrollValueChanged.Invoke(_currentRatio);
             }
         }

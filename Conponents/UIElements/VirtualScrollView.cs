@@ -130,6 +130,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             _velocity.y = 0f;
             ApplyScrollPosition();
             RefreshVisibleItems();
+            UpdateScrollbars();
         }
 
         private void OnHorizontalScrollbarChanged(float ratio)
@@ -139,6 +140,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             _velocity.x = 0f;
             ApplyScrollPosition();
             RefreshVisibleItems();
+            UpdateScrollbars();
         }
 
         /// <summary>
