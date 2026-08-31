@@ -1,34 +1,19 @@
 {
-    "name":  "Sperlich.UISystem",
-    "rootNamespace":  "",
-    "references":  [
-                       "GUID:6055be8ebefd69e48b49212b09b47b2f",
-                       "GUID:5ce0dff60954ba1489514d49bdce39b8",
-                       "GUID:98388da73c5f3cb43b933e4642a2debf",
-                       "GUID:f51ebe6a0ceec4240a699833d6309b23",
-                       "GUID:37124e22ec38e6e47b2e7a1ec93856ef",
-                       "GUID:80ecb87cae9c44d19824e70ea7229748",
-                       "Sperlich.Layout",
-                       "PrimeTween.Runtime",
-                       "UniTask"
-                   ],
-    "includePlatforms":  [
-
-                         ],
-    "excludePlatforms":  [
-
-                         ],
-    "allowUnsafeCode":  false,
-    "overrideReferences":  false,
-    "precompiledReferences":  [
-
-                              ],
-    "autoReferenced":  true,
-    "defineConstraints":  [
-
-                          ],
-    "versionDefines":  [
-
-                       ],
-    "noEngineReferences":  false
+    "name": "Sperlich.UISystem",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:80ecb87cae9c44d19824e70ea7229748",
+        "GUID:5c6a8489d7ab51c44a66823ef89b9c93"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }
