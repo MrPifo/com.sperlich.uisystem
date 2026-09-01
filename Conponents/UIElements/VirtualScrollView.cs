@@ -87,18 +87,34 @@ namespace Sperlich.UISystem.Conponents.UIElements
         private IVirtualScrollAdapter _adapter;
         private VirtualScrollAnimator _animator;
 
+        /// <summary>
+        /// Der optionale Animator für fließende Bewegungen bei Positions- und Listenänderungen.
+        /// Wird bei Bedarf auch dynamisch zur Laufzeit ermittelt.
+        /// </summary>
+        public VirtualScrollAnimator Animator
+        {
+            get
+            {
+                if (_animator == null)
+                {
+                    _animator = GetComponent<VirtualScrollAnimator>();
+                }
+                return _animator;
+            }
+            set => _animator = value;
+        }
+
+        // Cache und State
         private RectTransform _viewportRect;
         private Vector2 _currentScroll = Vector2.zero; // X = horizontaler Offset, Y = vertikaler Offset
         private Vector2 _velocity = Vector2.zero;
         private bool _isDragging = false;
-
         private int _lastItemCount = -1;
         private Dictionary<int, RectTransform> _activeItems = new Dictionary<int, RectTransform>();
 
         private void Awake()
         {
             _viewportRect = GetComponent<RectTransform>();
-            _animator = GetComponent<VirtualScrollAnimator>();
         }
 
         private void OnEnable()
@@ -396,7 +412,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             foreach (var index in toRemove)
             {
                 RectTransform item = _activeItems[index];
-                if (_animator != null) _animator.CancelAnimationFor(item);
+                if (Animator != null) Animator.CancelAnimationFor(item);
                 
                 _adapter.ReleaseItem(index, item);
                 _activeItems.Remove(index);
@@ -424,9 +440,9 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 }
                 else
                 {
-                    if (_animator != null)
+                    if (Animator != null)
                     {
-                        _animator.MoveItemTo(item, targetPos);
+                        Animator.MoveItemTo(item, targetPos);
                     }
                     else
                     {
@@ -485,7 +501,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             if (_adapter == null) return;
             foreach (var kvp in _activeItems)
             {
-                if (_animator != null) _animator.CancelAnimationFor(kvp.Value);
+                if (Animator != null) Animator.CancelAnimationFor(kvp.Value);
                 _adapter.ReleaseItem(kvp.Key, kvp.Value);
             }
             _activeItems.Clear();
