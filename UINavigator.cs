@@ -57,31 +57,31 @@ namespace Sperlich.UISystem {
 		#region Information
 		public static bool IsModalOpen { get; private set; }
 		public static bool IsInactive {
-			get => Instance != null ? Instance.isInactive : false;
-			private set {
-				if (Instance != null) {
-					Instance.isInactive = value;
-				}
-			}
+			get => Instance.isInactive;
+			private set => Instance.isInactive = value;
 		}
 		public static bool CursorDisabled {
-			get => Instance != null ? Instance.cursorDisabled : false;
-			private set {
-				if (Instance != null) {
-					Instance.cursorDisabled = value;
-				}
-			}
+			get => Instance.cursorDisabled;
+			private set => Instance.cursorDisabled = value;
 		}
-		public static bool CooldownActive => Instance != null && Instance.navCooldown > 0f;
-		public static bool IsEnabled => Instance == null || (Instance.isDisabled == false && IsInactive == false);
+		public static bool CooldownActive => Instance.navCooldown > 0f;
+		public static bool IsEnabled => Instance.isDisabled == false && IsInactive == false;
 		public static bool IsNavigationActive => CooldownActive == false && IsEnabled && IsInactive == false;
 		private static UINavigator _instance;
 		public static IUIInputProvider InputProvider { get; set; }
 		private static InputSystemResources _resources;
 		public static UINavigator Instance {
 			get {
-				if(_instance == null) {
+				if (_instance == null) {
 					_instance = FindFirstObjectByType<UINavigator>(FindObjectsInactive.Include);
+
+					if (_instance == null) {
+						GameObject go = new GameObject("[UINavigator]");
+						_instance = go.AddComponent<UINavigator>();
+						if (Application.isPlaying) {
+							DontDestroyOnLoad(go);
+						}
+					}
 				}
 
 				return _instance;
@@ -89,25 +89,17 @@ namespace Sperlich.UISystem {
 		}
 		public static ModalBase ActiveModal { get; private set; }
 		public static Navigator ActiveSelection {
-			get => Instance != null ? Instance.activeSelection : null;
-			set {
-				if (Instance != null) {
-					Instance.activeSelection = value;
-				}
-			}
+			get => Instance.activeSelection;
+			set => Instance.activeSelection = value;
 		}
 		public static Navigator LastSelection {
-			get => Instance != null ? Instance.lastSelected : null;
-			set {
-				if (Instance != null) {
-					Instance.lastSelected = value;
-				}
-			}
+			get => Instance.lastSelected;
+			set => Instance.lastSelected = value;
 		}
-		public static BaseInputModule InputModule => Instance != null ? Instance.inputModule : null;
-		public static EventSystem EventSystem => Instance != null ? Instance.eventSystem : EventSystem.current;
+		public static BaseInputModule InputModule => Instance.inputModule;
+		public static EventSystem EventSystem => Instance.eventSystem;
 		
-		public static ControlBar ControlBar => Instance != null ? Instance.controlBar : null;
+		public static ControlBar ControlBar => Instance.controlBar;
 		public static InputSystemResources Resources {
 			get {
 				if(_resources == null) {
@@ -117,26 +109,18 @@ namespace Sperlich.UISystem {
 				return _resources;
 			}
 		}
-		public static NavigationMode NavMode => Instance != null ? Instance.navigationMode : NavigationMode.Pointer;
+		public static NavigationMode NavMode => Instance.navigationMode;
 		public static bool IsSubMenuOpen => ActiveMenu != null && ActiveMenu.ActiveSubMenu != null;
-		public static IMenu ActiveMenu => Instance != null && Instance.menuHierarchy.Count > 0 ? Instance.menuHierarchy[0] : null;
+		public static IMenu ActiveMenu => Instance.menuHierarchy.Count > 0 ? Instance.menuHierarchy[0] : null;
 		public static ISubMenu ActiveSubMenu => IsSubMenuOpen ? ActiveMenu.ActiveSubMenu : null;
-		public static IReadOnlyList<IMenu> MenuHierarchy => Instance != null ? Instance.menuHierarchy : (IReadOnlyList<IMenu>)Array.Empty<IMenu>();
+		public static IReadOnlyList<IMenu> MenuHierarchy => Instance.menuHierarchy;
 		public static ISubmitHandler TargetSubmitHandler {
-			get => Instance != null ? Instance.targetSubmitHandler : null;
-			set {
-				if (Instance != null) {
-					Instance.targetSubmitHandler = value;
-				}
-			}
+			get => Instance.targetSubmitHandler;
+			set => Instance.targetSubmitHandler = value;
 		}
 		public static ICancelHandler TargetCancelHandler {
-			get => Instance != null ? Instance.targetCancelHandler : null;
-			set {
-				if (Instance != null) {
-					Instance.targetCancelHandler = value;
-				}
-			}
+			get => Instance.targetCancelHandler;
+			set => Instance.targetCancelHandler = value;
 		}
 		#endregion
 
@@ -209,11 +193,20 @@ namespace Sperlich.UISystem {
 			}
 		}
 		void FetchComponents() {
-			if (inputModule == null) {
-				inputModule = GetComponentInChildren<BaseInputModule>();
-			}
 			if (eventSystem == null) {
 				eventSystem = GetComponentInChildren<EventSystem>();
+				if (eventSystem == null) {
+					eventSystem = EventSystem.current;
+					if (eventSystem == null) {
+						eventSystem = FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include);
+					}
+				}
+			}
+			if (inputModule == null) {
+				inputModule = GetComponentInChildren<BaseInputModule>();
+				if (inputModule == null && eventSystem != null) {
+					inputModule = eventSystem.GetComponent<BaseInputModule>();
+				}
 			}
 			if (controlBar == null) {
 				controlBar = FindFirstObjectByType<ControlBar>(FindObjectsInactive.Include);
