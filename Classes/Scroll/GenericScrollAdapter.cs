@@ -61,6 +61,17 @@ namespace Sperlich.UISystem.Scroll
         }
 
         /// <summary>
+        /// Aktualisiert die Bindung für ein bestehendes sichtbares UI-Element.
+        /// </summary>
+        public virtual void RebindItem(int index, RectTransform item)
+        {
+            if (item != null && item.TryGetComponent(out TItem instance) && DataList != null && index >= 0 && index < DataList.Count)
+            {
+                BindItem(instance, DataList[index]);
+            }
+        }
+
+        /// <summary>
         /// Diese Methode musst du in deiner abgeleiteten Klasse überschreiben, 
         /// um die Daten (z.B. Text, Icons) auf das UI-Prefab zu mappen.
         /// </summary>

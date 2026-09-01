@@ -45,7 +45,7 @@ namespace Sperlich.UISystem.Scroll
             }
 
             // Neuen PrimeTween starten
-            Tween newTween = Tween.LocalPosition(item, targetPosition, MoveDuration, MoveEase);
+            Tween newTween = Tween.UIAnchoredPosition(item, targetPosition, MoveDuration, MoveEase);
             _activeTweens[item] = newTween;
         }
 

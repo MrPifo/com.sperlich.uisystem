@@ -117,8 +117,9 @@ namespace Sperlich.UISystem.Testing
 
                 if (activeVirtualView != null && currentAdapter != null && currentAdapter.SelectedIndex >= 0)
                 {
+                    int deletedIndex = currentAdapter.SelectedIndex;
                     currentAdapter.RemoveSelected();
-                    activeVirtualView.RebuildLayout();
+                    activeVirtualView.NotifyItemRemoved(deletedIndex);
                 }
                 else if (activeStandardView != null && selectedStandardCard != null)
                 {
@@ -380,6 +381,8 @@ namespace Sperlich.UISystem.Testing
             var view = viewportGo.GetComponent<VirtualScrollView>();
             view.ContentRect = contentRt;
             view.Mode = mode;
+
+            viewportGo.AddComponent<VirtualScrollAnimator>();
 
             UIScrollbar vBar = null;
             UIScrollbar hBar = null;
@@ -673,6 +676,11 @@ namespace Sperlich.UISystem.Testing
         {
             item.gameObject.SetActive(false);
             m_pool.Enqueue(item);
+        }
+
+        public void RebindItem(int index, RectTransform item)
+        {
+            BindItem(item, index);
         }
 
         private void BindItem(RectTransform item, int index)

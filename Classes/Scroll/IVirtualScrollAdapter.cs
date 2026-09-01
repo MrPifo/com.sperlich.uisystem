@@ -29,5 +29,12 @@ namespace Sperlich.UISystem.Scroll
         /// <param name="index">Der logische Listen-Index, der verschwunden ist.</param>
         /// <param name="item">Das dazugehörige RectTransform, das zuvor von GetItem zurückgegeben wurde.</param>
         void ReleaseItem(int index, RectTransform item);
+
+        /// <summary>
+        /// Optional: Aktualisiert die Datenbindung eines bereits sichtbaren RectTransforms (z. B. nach Listenänderungen oder Animationen).
+        /// </summary>
+        /// <param name="index">Der neue logische Listen-Index des Elements.</param>
+        /// <param name="item">Das sichtbare RectTransform.</param>
+        void RebindItem(int index, RectTransform item) { }
     }
 }

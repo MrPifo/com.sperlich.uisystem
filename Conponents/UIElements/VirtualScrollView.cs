@@ -189,7 +189,86 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             if (_adapter == null || ContentRect == null) return;
 
-            ReleaseAll();
+            RecalculateContentSize();
+            ClampScrollPosition();
+            ApplyScrollPosition();
+            RefreshVisibleItems();
+            UpdateScrollbars();
+        }
+
+        /// <summary>
+        /// Benachrichtigt die VirtualScrollView, dass ein Item an einem bestimmten Index gelöscht wurde.
+        /// Entfernt das Item und animiert die nachfolgenden Items fließend auf ihre neuen Positionen.
+        /// </summary>
+        /// <param name="index">Der Listen-Index des gelöschten Elements.</param>
+        public void NotifyItemRemoved(int index)
+        {
+            if (_adapter == null || ContentRect == null) return;
+
+            // 1. Das gelöschte Item aus den aktiven Items entfernen und recyclen
+            if (_activeItems.TryGetValue(index, out RectTransform deletedItem))
+            {
+                if (Animator != null) Animator.CancelAnimationFor(deletedItem);
+                _adapter.ReleaseItem(index, deletedItem);
+                _activeItems.Remove(index);
+            }
+
+            // 2. Alle nachfolgenden aktiven Items im Dictionary um 1 nach links verschieben
+            List<int> keysToShift = new List<int>();
+            foreach (var key in _activeItems.Keys)
+            {
+                if (key > index) keysToShift.Add(key);
+            }
+            keysToShift.Sort();
+
+            foreach (var key in keysToShift)
+            {
+                RectTransform item = _activeItems[key];
+                _activeItems.Remove(key);
+                _activeItems[key - 1] = item;
+            }
+
+            // 3. Layout neu berechnen und fließend animieren
+            RecalculateContentSize();
+            ClampScrollPosition();
+            ApplyScrollPosition();
+            RefreshVisibleItems();
+            UpdateScrollbars();
+        }
+
+        /// <summary>
+        /// Benachrichtigt die VirtualScrollView, dass ein neues Item an einem bestimmten Index eingefügt wurde.
+        /// Verschiebt nachfolgende Items und animiert sie fließend.
+        /// </summary>
+        /// <param name="index">Der Listen-Index des neu eingefügten Elements.</param>
+        public void NotifyItemInserted(int index)
+        {
+            if (_adapter == null || ContentRect == null) return;
+
+            // Alle aktiven Items ab 'index' um 1 nach rechts verschieben
+            List<int> keysToShift = new List<int>();
+            foreach (var key in _activeItems.Keys)
+            {
+                if (key >= index) keysToShift.Add(key);
+            }
+            keysToShift.Sort((a, b) => b.CompareTo(a)); // Absteigend sortieren
+
+            foreach (var key in keysToShift)
+            {
+                RectTransform item = _activeItems[key];
+                _activeItems.Remove(key);
+                _activeItems[key + 1] = item;
+            }
+
+            RecalculateContentSize();
+            ClampScrollPosition();
+            ApplyScrollPosition();
+            RefreshVisibleItems();
+            UpdateScrollbars();
+        }
+
+        private void RecalculateContentSize()
+        {
             _lastItemCount = _adapter.GetItemCount();
             Vector2 contentSize = ContentRect.sizeDelta;
 
@@ -213,11 +292,6 @@ namespace Sperlich.UISystem.Conponents.UIElements
             }
 
             ContentRect.sizeDelta = contentSize;
-
-            ClampScrollPosition();
-            ApplyScrollPosition();
-            RefreshVisibleItems();
-            UpdateScrollbars();
         }
 
         private void Update()
@@ -455,6 +529,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 }
                 else
                 {
+                    _adapter.RebindItem(index, item);
                     if (Animator != null)
                     {
                         Animator.MoveItemTo(item, targetPos);
