@@ -3,6 +3,7 @@ using Sperlich.UISystem.Conponents.UIElements;
 using Sperlich.UISystem.Scroll;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Sperlich.UISystem.Testing
@@ -31,6 +32,7 @@ namespace Sperlich.UISystem.Testing
     /// <summary>
     /// Interaktives Test-Setup für <see cref="VirtualScrollView"/> und <see cref="ScrollView"/>.
     /// Erzeugt dynamisch Viewports, interaktive Scrollbars (mit Hover-Fade), Dummy-Daten und Layouts.
+    /// Unterstützt Selektion von Items per Mausklick und Löschen per [DEL] (Entf)-Taste.
     /// </summary>
     [AddComponentMenu("Sperlich UI/Testing/Virtual Scroll Test Setup")]
     [ExecuteAlways]
@@ -55,6 +57,10 @@ namespace Sperlich.UISystem.Testing
 
         private RectTransform rootContainer;
         private SimpleTestScrollAdapter currentAdapter;
+        private VirtualScrollView activeVirtualView;
+        private ScrollView activeStandardView;
+        private GameObject selectedStandardCard;
+        private Color previousCardColor;
 
 #if UNITY_EDITOR
         private VirtualScrollTestPreset m_lastPreset = (VirtualScrollTestPreset)(-1);
@@ -90,6 +96,26 @@ namespace Sperlich.UISystem.Testing
             }
         }
 
+        private void Update()
+        {
+            if (!Application.isPlaying) return;
+
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Delete))
+            {
+                if (activeVirtualView != null && currentAdapter != null && currentAdapter.SelectedIndex >= 0)
+                {
+                    currentAdapter.RemoveSelected();
+                    activeVirtualView.RebuildLayout();
+                }
+                else if (activeStandardView != null && selectedStandardCard != null)
+                {
+                    Destroy(selectedStandardCard);
+                    selectedStandardCard = null;
+                    activeStandardView.UpdateContentSize();
+                }
+            }
+        }
+
         /// <summary>
         /// Generiert das aktuell ausgewählte Test-Preset.
         /// </summary>
@@ -98,6 +124,10 @@ namespace Sperlich.UISystem.Testing
         {
             EnsureRootContainer();
             ClearChildren();
+
+            activeVirtualView = null;
+            activeStandardView = null;
+            selectedStandardCard = null;
 
             switch (m_preset)
             {
@@ -125,112 +155,87 @@ namespace Sperlich.UISystem.Testing
             }
         }
 
-        private void EnsureRootContainer()
-        {
-            if (rootContainer != null) return;
-
-            var existing = transform.Find("VirtualScroll_Root");
-            if (existing != null)
-            {
-                rootContainer = existing.GetComponent<RectTransform>();
-            }
-            else
-            {
-                var go = new GameObject("VirtualScroll_Root", typeof(RectTransform));
-                go.transform.SetParent(transform, false);
-                rootContainer = go.GetComponent<RectTransform>();
-                rootContainer.anchorMin = Vector2.zero;
-                rootContainer.anchorMax = Vector2.one;
-                rootContainer.offsetMin = Vector2.zero;
-                rootContainer.offsetMax = Vector2.zero;
-            }
-        }
-
-        private void ClearChildren()
-        {
-            if (rootContainer == null) return;
-            for (int i = rootContainer.childCount - 1; i >= 0; i--)
-            {
-                var child = rootContainer.GetChild(i).gameObject;
-                if (Application.isPlaying)
-                    Destroy(child);
-                else
-                    DestroyImmediate(child);
-            }
-        }
-
-        #region Virtual Setups
+        #region Preset Builders
 
         private void BuildVirtualVerticalList()
         {
-            var panel = CreateCardPanel("Virtual Vertical List (1.000 Items + Scrollbar)", new Vector2(520f, 700f));
-            var (view, content, vScrollbar, _) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.VerticalList, hasVScrollbar: true, hasHScrollbar: false);
+            var panel = CreateCardPanel("Virtual Vertical List (1.000 Items)", new Vector2(480f, 620f));
+            var (view, content, vBar, _) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.VerticalList, hasVScrollbar: true, hasHScrollbar: false);
 
-            view.ItemSize1D = 60f;
+            activeVirtualView = view;
+            view.ItemSize1D = 65f;
             view.Spacing1D = 8f;
 
-            currentAdapter = panel.gameObject.AddComponent<SimpleTestScrollAdapter>();
-            currentAdapter.Initialize(m_totalItems, isGrid: false);
+            currentAdapter = gameObject.GetComponent<SimpleTestScrollAdapter>();
+            if (currentAdapter == null) currentAdapter = gameObject.AddComponent<SimpleTestScrollAdapter>();
+            currentAdapter.Initialize(m_totalItems, isGrid: false, onSelectionChanged: () => view.RebuildLayout());
+
             view.SetAdapter(currentAdapter);
         }
 
         private void BuildVirtualHorizontalList()
         {
-            var panel = CreateCardPanel("Virtual Horizontal List (1.000 Items + Scrollbar)", new Vector2(800f, 320f));
-            var (view, content, _, hScrollbar) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.HorizontalList, hasVScrollbar: false, hasHScrollbar: true);
+            var panel = CreateCardPanel("Virtual Horizontal List (1.000 Items)", new Vector2(750f, 260f));
+            var (view, content, _, hBar) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.HorizontalList, hasVScrollbar: false, hasHScrollbar: true);
 
-            view.ItemSize1D = 180f;
-            view.Spacing1D = 12f;
+            activeVirtualView = view;
+            view.ItemSize1D = 140f;
+            view.Spacing1D = 10f;
 
-            currentAdapter = panel.gameObject.AddComponent<SimpleTestScrollAdapter>();
-            currentAdapter.Initialize(m_totalItems, isGrid: false);
+            currentAdapter = gameObject.GetComponent<SimpleTestScrollAdapter>();
+            if (currentAdapter == null) currentAdapter = gameObject.AddComponent<SimpleTestScrollAdapter>();
+            currentAdapter.Initialize(m_totalItems, isGrid: false, onSelectionChanged: () => view.RebuildLayout());
+
             view.SetAdapter(currentAdapter);
         }
 
         private void BuildVirtualGrid()
         {
-            var panel = CreateCardPanel("Virtual 4-Column Grid (1.000 Items + Scrollbar)", new Vector2(740f, 700f));
-            var (view, content, vScrollbar, _) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.Grid, hasVScrollbar: true, hasHScrollbar: false);
+            var panel = CreateCardPanel("Virtual Grid View (4 Spalten, 1.000 Items)", new Vector2(680f, 620f));
+            var (view, content, vBar, _) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.Grid, hasVScrollbar: true, hasHScrollbar: false);
 
+            activeVirtualView = view;
             view.Columns = 4;
-            view.GridItemSize = new Vector2(155f, 155f);
-            view.GridSpacing = new Vector2(12f, 12f);
+            view.GridItemSize = new Vector2(145f, 110f);
+            view.GridSpacing = new Vector2(10f, 10f);
             view.GridPadding = new Vector2(10f, 10f);
 
-            currentAdapter = panel.gameObject.AddComponent<SimpleTestScrollAdapter>();
-            currentAdapter.Initialize(m_totalItems, isGrid: true);
+            currentAdapter = gameObject.GetComponent<SimpleTestScrollAdapter>();
+            if (currentAdapter == null) currentAdapter = gameObject.AddComponent<SimpleTestScrollAdapter>();
+            currentAdapter.Initialize(m_totalItems, isGrid: true, onSelectionChanged: () => view.RebuildLayout());
+
             view.SetAdapter(currentAdapter);
         }
 
         private void BuildVirtualGrid2D()
         {
-            var panel = CreateCardPanel("Virtual 2D Matrix (50x50 = 2.500 Cells + 2D Scrollbars)", new Vector2(800f, 650f));
-            var (view, content, vScrollbar, hScrollbar) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.Grid2D, hasVScrollbar: true, hasHScrollbar: true);
+            var panel = CreateCardPanel("Virtual 2D Matrix (50x50 = 2.500 Zellen)", new Vector2(800f, 650f));
+            var (view, content, vBar, hBar) = CreateVirtualScrollViewStructure(panel, VirtualScrollMode.Grid2D, hasVScrollbar: true, hasHScrollbar: true);
 
+            activeVirtualView = view;
             view.Columns = 50;
             view.Rows2D = 50;
-            view.GridItemSize = new Vector2(120f, 120f);
-            view.GridSpacing = new Vector2(10f, 10f);
+            view.GridItemSize = new Vector2(120f, 90f);
+            view.GridSpacing = new Vector2(8f, 8f);
             view.GridPadding = new Vector2(10f, 10f);
 
-            currentAdapter = panel.gameObject.AddComponent<SimpleTestScrollAdapter>();
-            currentAdapter.Initialize(2500, isGrid: true);
+            currentAdapter = gameObject.GetComponent<SimpleTestScrollAdapter>();
+            if (currentAdapter == null) currentAdapter = gameObject.AddComponent<SimpleTestScrollAdapter>();
+            currentAdapter.Initialize(2500, isGrid: true, onSelectionChanged: () => view.RebuildLayout());
+
             view.SetAdapter(currentAdapter);
         }
 
-        #endregion
-
-        #region Standard Setups (No Pooling)
-
         private void BuildStandardFlexVertical()
         {
-            var panel = CreateCardPanel("Standard ScrollView + FlexContainer (Vertical, 20 Items)", new Vector2(520f, 700f));
+            var panel = CreateCardPanel("Standard ScrollView + FlexContainer (Vertikal, 20 Items)", new Vector2(480f, 600f));
             var (scrollView, content) = CreateStandardScrollViewStructure(panel, ScrollDirection.Vertical, hasVScrollbar: true, hasHScrollbar: false);
 
+            activeStandardView = scrollView;
             var flex = content.gameObject.AddComponent<FlexContainer>();
             flex.Direction = FlexDirection.Column;
-            flex.Gap = new Vector2(0f, 8f);
-            flex.Padding = new RectOffset(5, 5, 5, 5);
+            flex.Gap = new Vector2(8f, 8f);
+            flex.Padding = new RectOffset(10, 10, 10, 10);
 
             for (int i = 0; i < 20; i++)
             {
@@ -240,13 +245,14 @@ namespace Sperlich.UISystem.Testing
 
         private void BuildStandardFlexHorizontal()
         {
-            var panel = CreateCardPanel("Standard ScrollView + FlexContainer (Horizontal, 20 Items)", new Vector2(800f, 320f));
+            var panel = CreateCardPanel("Standard ScrollView + FlexContainer (Horizontal, 20 Items)", new Vector2(750f, 240f));
             var (scrollView, content) = CreateStandardScrollViewStructure(panel, ScrollDirection.Horizontal, hasVScrollbar: false, hasHScrollbar: true);
 
+            activeStandardView = scrollView;
             var flex = content.gameObject.AddComponent<FlexContainer>();
             flex.Direction = FlexDirection.Row;
-            flex.Gap = new Vector2(12f, 0f);
-            flex.Padding = new RectOffset(5, 5, 5, 5);
+            flex.Gap = new Vector2(10f, 10f);
+            flex.Padding = new RectOffset(10, 10, 10, 10);
 
             for (int i = 0; i < 20; i++)
             {
@@ -259,6 +265,7 @@ namespace Sperlich.UISystem.Testing
             var panel = CreateCardPanel("Standard ScrollView + GridContainer (2D Both, 60 Items)", new Vector2(800f, 650f));
             var (scrollView, content) = CreateStandardScrollViewStructure(panel, ScrollDirection.Both, hasVScrollbar: true, hasHScrollbar: true);
 
+            activeStandardView = scrollView;
             var grid = content.gameObject.AddComponent<GridContainer>();
             grid.Columns.Clear();
             for (int i = 0; i < 6; i++)
@@ -289,23 +296,38 @@ namespace Sperlich.UISystem.Testing
             rt.anchoredPosition = Vector2.zero;
 
             var img = panelGo.GetComponent<Image>();
-            img.color = new Color(0.12f, 0.14f, 0.18f, 0.95f);
+            img.color = new Color(0.12f, 0.13f, 0.17f, 0.95f);
 
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            // Header Title
+            var titleGo = new GameObject("HeaderTitle", typeof(RectTransform), typeof(TextMeshProUGUI));
             titleGo.transform.SetParent(rt, false);
             var titleRt = titleGo.GetComponent<RectTransform>();
             titleRt.anchorMin = new Vector2(0f, 1f);
             titleRt.anchorMax = new Vector2(1f, 1f);
-            titleRt.pivot = new Vector2(0.5f, 1f);
-            titleRt.anchoredPosition = new Vector2(0f, -10f);
-            titleRt.sizeDelta = new Vector2(-20f, 35f);
+            titleRt.pivot = new Vector2(0f, 1f);
+            titleRt.anchoredPosition = new Vector2(16f, -12f);
+            titleRt.sizeDelta = new Vector2(-32f, 22f);
 
-            var tmp = titleGo.GetComponent<TextMeshProUGUI>();
-            tmp.text = title;
-            tmp.fontSize = 18f;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.color = Color.white;
-            tmp.alignment = TextAlignmentOptions.Center;
+            var titleTmp = titleGo.GetComponent<TextMeshProUGUI>();
+            titleTmp.text = title;
+            titleTmp.fontSize = 15f;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.color = Color.white;
+
+            // Subtitle / Controls Hint
+            var hintGo = new GameObject("Hint", typeof(RectTransform), typeof(TextMeshProUGUI));
+            hintGo.transform.SetParent(rt, false);
+            var hintRt = hintGo.GetComponent<RectTransform>();
+            hintRt.anchorMin = new Vector2(0f, 1f);
+            hintRt.anchorMax = new Vector2(1f, 1f);
+            hintRt.pivot = new Vector2(0f, 1f);
+            hintRt.anchoredPosition = new Vector2(16f, -36f);
+            hintRt.sizeDelta = new Vector2(-32f, 18f);
+
+            var hintTmp = hintGo.GetComponent<TextMeshProUGUI>();
+            hintTmp.text = "Item anklicken zum Selektieren • [DEL] zum Löschen";
+            hintTmp.fontSize = 11f;
+            hintTmp.color = new Color(0.7f, 0.75f, 0.85f, 0.85f);
 
             return rt;
         }
@@ -326,7 +348,7 @@ namespace Sperlich.UISystem.Testing
             vpRt.anchorMin = Vector2.zero;
             vpRt.anchorMax = Vector2.one;
             vpRt.offsetMin = new Vector2(15f, bottomPadding);
-            vpRt.offsetMax = new Vector2(-rightPadding, -55f);
+            vpRt.offsetMax = new Vector2(-rightPadding, -58f);
 
             var vpImg = viewportGo.GetComponent<Image>();
             vpImg.color = new Color(0.08f, 0.09f, 0.12f, 1f);
@@ -347,13 +369,14 @@ namespace Sperlich.UISystem.Testing
             view.Mode = mode;
 
             UIScrollbar vBar = null;
+            UIScrollbar hBar = null;
+
             if (hasVScrollbar)
             {
-                vBar = CreateScrollbar(parent, ScrollbarOrientation.Vertical, new Vector2(-15f, -55f), new Vector2(10f, bottomPadding));
+                vBar = CreateScrollbar(parent, ScrollbarOrientation.Vertical, new Vector2(-15f, -58f), new Vector2(10f, bottomPadding));
                 view.VerticalScrollbar = vBar;
             }
 
-            UIScrollbar hBar = null;
             if (hasHScrollbar)
             {
                 hBar = CreateScrollbar(parent, ScrollbarOrientation.Horizontal, new Vector2(15f, 15f), new Vector2(rightPadding, 10f));
@@ -379,7 +402,7 @@ namespace Sperlich.UISystem.Testing
             vpRt.anchorMin = Vector2.zero;
             vpRt.anchorMax = Vector2.one;
             vpRt.offsetMin = new Vector2(15f, bottomPadding);
-            vpRt.offsetMax = new Vector2(-rightPadding, -55f);
+            vpRt.offsetMax = new Vector2(-rightPadding, -58f);
 
             var vpImg = viewportGo.GetComponent<Image>();
             vpImg.color = new Color(0.08f, 0.09f, 0.12f, 1f);
@@ -402,7 +425,7 @@ namespace Sperlich.UISystem.Testing
 
             if (hasVScrollbar)
             {
-                var vBar = CreateScrollbar(parent, ScrollbarOrientation.Vertical, new Vector2(-15f, -55f), new Vector2(10f, bottomPadding));
+                var vBar = CreateScrollbar(parent, ScrollbarOrientation.Vertical, new Vector2(-15f, -58f), new Vector2(10f, bottomPadding));
                 view.VerticalScrollbar = vBar;
             }
 
@@ -471,13 +494,14 @@ namespace Sperlich.UISystem.Testing
 
         private GameObject CreateStaticCard(RectTransform parent, int index, bool isHorizontal, float customHeight = 55f)
         {
-            var cardGo = new GameObject($"Card_{index + 1}", typeof(RectTransform), typeof(Image), typeof(FlexElement));
+            var cardGo = new GameObject($"Card_{index + 1}", typeof(RectTransform), typeof(Image), typeof(FlexElement), typeof(TestScrollItemClick));
             cardGo.transform.SetParent(parent, false);
 
             var rt = cardGo.GetComponent<RectTransform>();
             var img = cardGo.GetComponent<Image>();
             float hue = (index * 17 % 100) / 100f;
-            img.color = Color.HSVToRGB(hue, 0.6f, 0.3f);
+            Color baseColor = Color.HSVToRGB(hue, 0.6f, 0.3f);
+            img.color = baseColor;
 
             var flexEl = cardGo.GetComponent<FlexElement>();
             if (isHorizontal)
@@ -505,28 +529,115 @@ namespace Sperlich.UISystem.Testing
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
 
+            var clickHandler = cardGo.GetComponent<TestScrollItemClick>();
+            clickHandler.OnClick = () =>
+            {
+                if (selectedStandardCard != null && selectedStandardCard != cardGo)
+                {
+                    var prevImg = selectedStandardCard.GetComponent<Image>();
+                    if (prevImg != null) prevImg.color = previousCardColor;
+                }
+
+                selectedStandardCard = cardGo;
+                previousCardColor = baseColor;
+                img.color = new Color(0.95f, 0.65f, 0.15f, 1f);
+            };
+
             return cardGo;
+        }
+
+        private void EnsureRootContainer()
+        {
+            if (rootContainer != null) return;
+
+            var child = transform.Find("Test_Container");
+            if (child != null)
+            {
+                rootContainer = child.GetComponent<RectTransform>();
+            }
+            else
+            {
+                var go = new GameObject("Test_Container", typeof(RectTransform));
+                go.transform.SetParent(transform, false);
+                rootContainer = go.GetComponent<RectTransform>();
+                rootContainer.anchorMin = Vector2.zero;
+                rootContainer.anchorMax = Vector2.one;
+                rootContainer.sizeDelta = Vector2.zero;
+            }
+        }
+
+        private void ClearChildren()
+        {
+            if (rootContainer == null) return;
+
+            for (int i = rootContainer.childCount - 1; i >= 0; i--)
+            {
+                var child = rootContainer.GetChild(i).gameObject;
+                if (Application.isPlaying)
+                {
+                    Destroy(child);
+                }
+                else
+                {
+                    DestroyImmediate(child);
+                }
+            }
         }
 
         #endregion
     }
 
     /// <summary>
+    /// Klick-Handler für Test-Items zur Selektion.
+    /// </summary>
+    public class TestScrollItemClick : MonoBehaviour, IPointerClickHandler
+    {
+        public System.Action OnClick;
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            OnClick?.Invoke();
+        }
+    }
+
+    /// <summary>
     /// Interner Test-Adapter für Dummy-Item-Generierung ohne externe Prefab-Abhängigkeiten.
+    /// Unterstützt Selektion und dynamisches Löschen von Items.
     /// </summary>
     public class SimpleTestScrollAdapter : MonoBehaviour, IVirtualScrollAdapter
     {
-        private int m_itemCount = 1000;
+        private List<int> m_items = new List<int>();
         private bool m_isGrid = false;
+        private System.Action m_onSelectionChanged;
         private Queue<RectTransform> m_pool = new Queue<RectTransform>();
 
-        public void Initialize(int count, bool isGrid)
+        public int SelectedIndex = -1;
+
+        public void Initialize(int count, bool isGrid, System.Action onSelectionChanged = null)
         {
-            m_itemCount = count;
+            m_items.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                m_items.Add(i);
+            }
             m_isGrid = isGrid;
+            m_onSelectionChanged = onSelectionChanged;
+            SelectedIndex = -1;
         }
 
-        public int GetItemCount() => m_itemCount;
+        public int GetItemCount() => m_items.Count;
+
+        public void RemoveSelected()
+        {
+            if (SelectedIndex >= 0 && SelectedIndex < m_items.Count)
+            {
+                m_items.RemoveAt(SelectedIndex);
+                if (SelectedIndex >= m_items.Count)
+                {
+                    SelectedIndex = m_items.Count - 1;
+                }
+            }
+        }
 
         public RectTransform GetItem(int index)
         {
@@ -553,30 +664,48 @@ namespace Sperlich.UISystem.Testing
 
         private void BindItem(RectTransform item, int index)
         {
+            int originalId = index < m_items.Count ? m_items[index] : index;
+            bool isSelected = index == SelectedIndex;
+
             var titleText = item.Find("Title")?.GetComponent<TextMeshProUGUI>();
             var subText = item.Find("SubText")?.GetComponent<TextMeshProUGUI>();
 
             if (titleText != null)
             {
-                titleText.text = m_isGrid ? $"Cell #{index + 1}" : $"Rank #{index + 1} - Player_{index:D4}";
+                titleText.text = m_isGrid ? $"Cell #{originalId + 1}" : $"Rank #{index + 1} - Player_{originalId:D4}";
             }
 
             if (subText != null)
             {
-                subText.text = m_isGrid ? $"Lv. {(index % 50) + 1}" : $"Score: {(10000 - index * 7):N0} pts";
+                subText.text = m_isGrid ? $"Lv. {(originalId % 50) + 1}" : $"Score: {(10000 - originalId * 7):N0} pts";
             }
 
             var img = item.GetComponent<Image>();
             if (img != null)
             {
-                float hue = (index * 13 % 100) / 100f;
-                img.color = Color.HSVToRGB(hue, 0.55f, 0.25f);
+                if (isSelected)
+                {
+                    img.color = new Color(0.95f, 0.65f, 0.15f, 1f); // Akzent-Orange für Selektion
+                }
+                else
+                {
+                    float hue = (originalId * 13 % 100) / 100f;
+                    img.color = Color.HSVToRGB(hue, 0.55f, 0.25f);
+                }
             }
+
+            var clickHandler = item.GetComponent<TestScrollItemClick>();
+            if (clickHandler == null) clickHandler = item.gameObject.AddComponent<TestScrollItemClick>();
+            clickHandler.OnClick = () =>
+            {
+                SelectedIndex = index;
+                m_onSelectionChanged?.Invoke();
+            };
         }
 
         private RectTransform CreateItemPrefab()
         {
-            var go = new GameObject("ScrollItem", typeof(RectTransform), typeof(Image));
+            var go = new GameObject("ScrollItem", typeof(RectTransform), typeof(Image), typeof(TestScrollItemClick));
             var rt = go.GetComponent<RectTransform>();
 
             var img = go.GetComponent<Image>();
