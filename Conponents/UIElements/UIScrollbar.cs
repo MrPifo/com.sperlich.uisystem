@@ -1,5 +1,5 @@
 using PrimeTween;
-using System;
+using Sperlich.UISystem.Themes;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -17,12 +17,13 @@ namespace Sperlich.UISystem.Conponents.UIElements
     }
 
     /// <summary>
-    /// Eine leichtgewichtige, interaktive Scrollbar mit dynamischer Handle-Größe,
-    /// Drag-Funktionalität und flüssigen Hover-/Press-Animationen via PrimeTween.
+    /// Eine moderne Scrollbar-Komponente, die von <see cref="UIBase"/> erbt.
+    /// Unterstützt automatisches Theming über <see cref="ColorThemeAsset"/>,
+    /// nahtlose Event-Verwaltung, dynamische Handle-Skalierung und flüssige PrimeTween-Animationen.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     [AddComponentMenu("Sperlich UI/UI Elements/UI Scrollbar")]
-    public class UIScrollbar : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IDragHandler
+    public class UIScrollbar : UIBase
     {
         [Header("Orientation")]
         public ScrollbarOrientation Orientation = ScrollbarOrientation.Vertical;
@@ -32,11 +33,14 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public RectTransform Handle;
         public Image HandleImage;
 
-        [Header("Colors & Feedback")]
-        public Color NormalColor = new Color(1f, 1f, 1f, 0.35f);
-        public Color HoverColor = new Color(1f, 1f, 1f, 0.65f);
-        public Color PressColor = new Color(1f, 1f, 1f, 0.95f);
-        public float FadeDuration = 0.15f;
+        [Header("Theme & Visuals")]
+        [Tooltip("Optionales Theme für automatisches Farbmanagement im gesamten UI-System.")]
+        [SerializeField] private ColorThemeAsset handleTheme;
+        [SerializeField] private Color normalColor = new Color(1f, 1f, 1f, 0.35f);
+        [SerializeField] private Color hoverColor = new Color(1f, 1f, 1f, 0.65f);
+        [SerializeField] private Color pressColor = new Color(1f, 1f, 1f, 0.95f);
+        [SerializeField] private Color disabledColor = new Color(1f, 1f, 1f, 0.15f);
+        [SerializeField] private float fadeDuration = 0.15f;
 
         [Header("Handle Sizing")]
         public float MinHandleSize = 30f;
@@ -44,19 +48,77 @@ namespace Sperlich.UISystem.Conponents.UIElements
         [Header("Events")]
         public UnityEvent<float> OnScrollValueChanged = new UnityEvent<float>();
 
+        public ColorThemeAsset HandleTheme
+        {
+            get => handleTheme;
+            set
+            {
+                handleTheme = value;
+                OnVisualsChanged(State);
+            }
+        }
+
+        public Color NormalColor { get => normalColor; set => normalColor = value; }
+        public Color HoverColor { get => hoverColor; set => hoverColor = value; }
+        public Color PressColor { get => pressColor; set => pressColor = value; }
+        public Color DisabledColor { get => disabledColor; set => disabledColor = value; }
+        public float FadeDuration { get => fadeDuration; set => fadeDuration = value; }
+
         private float _currentRatio = 0f;
-        private bool _isHovered = false;
-        private bool _isPressed = false;
         private Tween _colorTween;
 
-        private void Awake()
+        protected override void FetchComponents()
         {
+            base.FetchComponents();
+
             if (Track == null) Track = GetComponent<RectTransform>();
-            if (HandleImage == null && Handle != null) HandleImage = Handle.GetComponent<Image>();
-            
-            if (HandleImage != null)
+            if (Handle == null && Track != null)
             {
-                HandleImage.color = NormalColor;
+                TrySearch(Track, "Handle", out Handle);
+            }
+            if (HandleImage == null && Handle != null)
+            {
+                HandleImage = Handle.GetComponent<Image>();
+            }
+        }
+
+        protected override void OnAwake()
+        {
+            base.OnAwake();
+
+            AddEvent(EventSignal.PointerEnter, OnPointerEnter);
+            AddEvent(EventSignal.PointerExit, OnPointerExit);
+            AddEvent(EventSignal.PointerDown, OnPointerDown);
+            AddEvent(EventSignal.PointerUp, OnPointerUp);
+            AddEvent(EventSignal.Drag, OnPointerDrag);
+
+            OnVisualsChanged(ComponentState.Normal);
+        }
+
+        protected virtual void OnEnable()
+        {
+            _colorTween.Stop();
+            OnVisualsChanged(IsInteractable ? ComponentState.Normal : ComponentState.Disabled);
+        }
+
+        protected virtual void OnDisable()
+        {
+            _colorTween.Stop();
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            _colorTween.Stop();
+        }
+
+        protected internal override void OnStateChanged(ComponentState state)
+        {
+            base.OnStateChanged(state);
+
+            if (state == ComponentState.Disabled)
+            {
+                OnVisualsChanged(IsState(ComponentState.Disabled) ? ComponentState.Disabled : ComponentState.Normal);
             }
         }
 
@@ -101,37 +163,45 @@ namespace Sperlich.UISystem.Conponents.UIElements
             }
         }
 
-        #region Interaction & Animations
+        #region Event Handlers
 
-        public void OnPointerEnter(PointerEventData eventData)
+        private void OnPointerEnter(EventData evt)
         {
-            _isHovered = true;
-            if (!_isPressed) AnimateToColor(HoverColor);
+            if (!IsInteractable) return;
+            OnVisualsChanged(ComponentState.Hovered);
         }
 
-        public void OnPointerExit(PointerEventData eventData)
+        private void OnPointerExit(EventData evt)
         {
-            _isHovered = false;
-            if (!_isPressed) AnimateToColor(NormalColor);
+            if (!IsInteractable) return;
+            OnVisualsChanged(IsPressed ? ComponentState.Pressed : ComponentState.Normal);
         }
 
-        public void OnPointerDown(PointerEventData eventData)
+        private void OnPointerDown(EventData evt)
         {
-            _isPressed = true;
-            AnimateToColor(PressColor);
+            if (!IsInteractable) return;
+            OnVisualsChanged(ComponentState.Pressed);
 
-            UpdateRatioFromPointer(eventData);
+            if (evt.pointerData != null)
+            {
+                UpdateRatioFromPointer(evt.pointerData);
+            }
         }
 
-        public void OnPointerUp(PointerEventData eventData)
+        private void OnPointerUp(EventData evt)
         {
-            _isPressed = false;
-            AnimateToColor(_isHovered ? HoverColor : NormalColor);
+            if (!IsInteractable) return;
+            OnVisualsChanged(IsHovered ? ComponentState.Hovered : ComponentState.Normal);
         }
 
-        public void OnDrag(PointerEventData eventData)
+        private void OnPointerDrag(EventData evt)
         {
-            UpdateRatioFromPointer(eventData);
+            if (!IsInteractable) return;
+
+            if (evt.pointerData != null)
+            {
+                UpdateRatioFromPointer(evt.pointerData);
+            }
         }
 
         private void UpdateRatioFromPointer(PointerEventData eventData)
@@ -146,7 +216,6 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 float handleHeight = Handle.rect.height;
                 float travel = Mathf.Max(0f, trackHeight - handleHeight);
 
-                // localPoint.y: Track.rect.yMax (oben) bis Track.rect.yMin (unten)
                 float topY = Track.rect.yMax - (handleHeight / 2f);
                 float bottomY = Track.rect.yMin + (handleHeight / 2f);
 
@@ -177,12 +246,46 @@ namespace Sperlich.UISystem.Conponents.UIElements
             }
         }
 
-        private void AnimateToColor(Color targetColor)
+        #endregion
+
+        #region Visual Transitions
+
+        protected virtual void OnVisualsChanged(ComponentState state)
         {
             if (HandleImage == null) return;
+
+            Color targetColor = GetColorForState(state);
+
             if (_colorTween.isAlive) _colorTween.Stop();
 
-            _colorTween = Tween.Color(HandleImage, targetColor, FadeDuration, Ease.OutQuad);
+            if (Application.isPlaying)
+            {
+                _colorTween = Tween.Color(HandleImage, targetColor, fadeDuration, Ease.OutQuad);
+            }
+            else
+            {
+                HandleImage.color = targetColor;
+            }
+        }
+
+        private Color GetColorForState(ComponentState state)
+        {
+            if (handleTheme != null)
+            {
+                return handleTheme.GetColor(state);
+            }
+
+            switch (state)
+            {
+                case ComponentState.Hovered:
+                    return hoverColor;
+                case ComponentState.Pressed:
+                    return pressColor;
+                case ComponentState.Disabled:
+                    return disabledColor;
+                default:
+                    return normalColor;
+            }
         }
 
         #endregion
