@@ -77,6 +77,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public float ElasticityBounceSpeed = 15f;
 
         private RectTransform _viewportRect;
+        private RectTransform ViewportRect
+        {
+            get
+            {
+                if (_viewportRect == null)
+                {
+                    _viewportRect = GetComponent<RectTransform>();
+                }
+                return _viewportRect;
+            }
+        }
+
         private Vector2 _currentScroll = Vector2.zero; // X = horizontaler Offset, Y = vertikaler Offset
         private Vector2 _velocity = Vector2.zero;
         private bool _isDragging = false;
@@ -116,7 +128,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void OnVerticalScrollbarChanged(float ratio)
         {
-            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - _viewportRect.rect.height);
+            if (ContentRect == null || ViewportRect == null) return;
+            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - ViewportRect.rect.height);
             _currentScroll.y = ratio * maxScrollY;
             _velocity.y = 0f;
             ApplyScrollPosition();
@@ -124,7 +137,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void OnHorizontalScrollbarChanged(float ratio)
         {
-            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - _viewportRect.rect.width);
+            if (ContentRect == null || ViewportRect == null) return;
+            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - ViewportRect.rect.width);
             _currentScroll.x = ratio * maxScrollX;
             _velocity.x = 0f;
             ApplyScrollPosition();
@@ -250,8 +264,9 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private Vector2 GetMaxScroll()
         {
-            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - _viewportRect.rect.height);
-            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - _viewportRect.rect.width);
+            if (ContentRect == null || ViewportRect == null) return Vector2.zero;
+            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - ViewportRect.rect.height);
+            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - ViewportRect.rect.width);
             return new Vector2(maxScrollX, maxScrollY);
         }
 
@@ -286,14 +301,14 @@ namespace Sperlich.UISystem.Conponents.UIElements
             if (_verticalScrollbar != null && maxScroll.y > 0f)
             {
                 float ratio = _currentScroll.y / maxScroll.y;
-                float visibleRatio = _viewportRect.rect.height / ContentRect.rect.height;
+                float visibleRatio = ViewportRect.rect.height / ContentRect.rect.height;
                 _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
 
             if (_horizontalScrollbar != null && maxScroll.x > 0f)
             {
                 float ratio = _currentScroll.x / maxScroll.x;
-                float visibleRatio = _viewportRect.rect.width / ContentRect.rect.width;
+                float visibleRatio = ViewportRect.rect.width / ContentRect.rect.width;
                 _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
         }

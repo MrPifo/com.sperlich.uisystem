@@ -106,6 +106,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         // Cache und State
         private RectTransform _viewportRect;
+        private RectTransform ViewportRect
+        {
+            get
+            {
+                if (_viewportRect == null)
+                {
+                    _viewportRect = GetComponent<RectTransform>();
+                }
+                return _viewportRect;
+            }
+        }
+
         private Vector2 _currentScroll = Vector2.zero; // X = horizontaler Offset, Y = vertikaler Offset
         private Vector2 _velocity = Vector2.zero;
         private bool _isDragging = false;
@@ -141,7 +153,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void OnVerticalScrollbarChanged(float ratio)
         {
-            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - _viewportRect.rect.height);
+            if (ContentRect == null || ViewportRect == null) return;
+            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - ViewportRect.rect.height);
             _currentScroll.y = ratio * maxScrollY;
             _velocity.y = 0f;
             ApplyScrollPosition();
@@ -151,7 +164,8 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void OnHorizontalScrollbarChanged(float ratio)
         {
-            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - _viewportRect.rect.width);
+            if (ContentRect == null || ViewportRect == null) return;
+            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - ViewportRect.rect.width);
             _currentScroll.x = ratio * maxScrollX;
             _velocity.x = 0f;
             ApplyScrollPosition();
@@ -277,8 +291,9 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private Vector2 GetMaxScroll()
         {
-            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - _viewportRect.rect.height);
-            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - _viewportRect.rect.width);
+            if (ContentRect == null || ViewportRect == null) return Vector2.zero;
+            float maxScrollY = Mathf.Max(0f, ContentRect.rect.height - ViewportRect.rect.height);
+            float maxScrollX = Mathf.Max(0f, ContentRect.rect.width - ViewportRect.rect.width);
             return new Vector2(maxScrollX, maxScrollY);
         }
 
@@ -302,14 +317,14 @@ namespace Sperlich.UISystem.Conponents.UIElements
             if (_verticalScrollbar != null && maxScroll.y > 0f)
             {
                 float ratio = _currentScroll.y / maxScroll.y;
-                float visibleRatio = _viewportRect.rect.height / ContentRect.rect.height;
+                float visibleRatio = ViewportRect.rect.height / ContentRect.rect.height;
                 _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
 
             if (_horizontalScrollbar != null && maxScroll.x > 0f)
             {
                 float ratio = _currentScroll.x / maxScroll.x;
-                float visibleRatio = _viewportRect.rect.width / ContentRect.rect.width;
+                float visibleRatio = ViewportRect.rect.width / ContentRect.rect.width;
                 _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
             }
         }
@@ -319,7 +334,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
         /// </summary>
         private void RefreshVisibleItems()
         {
-            if (_adapter == null || ContentRect == null || _viewportRect == null) return;
+            if (_adapter == null || ContentRect == null || ViewportRect == null) return;
 
             if (_lastItemCount == 0)
             {
@@ -339,7 +354,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 case VirtualScrollMode.VerticalList:
                     VirtualScrollMath.CalculateVisibleIndices(
                         safeScrollY, 
-                        _viewportRect.rect.height, 
+                        ViewportRect.rect.height, 
                         ItemSize1D, 
                         Spacing1D, 
                         _lastItemCount, 
@@ -351,7 +366,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 case VirtualScrollMode.HorizontalList:
                     VirtualScrollMath.CalculateHorizontalVisibleIndices(
                         safeScrollX, 
-                        _viewportRect.rect.width, 
+                        ViewportRect.rect.width, 
                         ItemSize1D, 
                         Spacing1D, 
                         _lastItemCount, 
@@ -363,7 +378,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 case VirtualScrollMode.Grid:
                     VirtualScrollMath.CalculateGridVisibleIndices(
                         safeScrollY, 
-                        _viewportRect.rect.height, 
+                        ViewportRect.rect.height, 
                         GridItemSize.y, 
                         GridSpacing.y, 
                         Columns, 
@@ -376,7 +391,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
                 case VirtualScrollMode.Grid2D:
                     VirtualScrollMath.Calculate2DGridVisibleBounds(
                         new Vector2(safeScrollX, safeScrollY), 
-                        _viewportRect.rect.size, 
+                        ViewportRect.rect.size, 
                         GridItemSize, 
                         GridSpacing, 
                         Columns, 
