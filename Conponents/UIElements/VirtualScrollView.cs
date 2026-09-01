@@ -159,6 +159,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             if (_adapter == null || ContentRect == null) return;
 
+            ReleaseAll();
             _lastItemCount = _adapter.GetItemCount();
             Vector2 contentSize = ContentRect.sizeDelta;
 

@@ -90,7 +90,7 @@ namespace Sperlich.UISystem.Testing
 
         private void Start()
         {
-            if (rootContainer != null && rootContainer.childCount == 0)
+            if (Application.isPlaying || (rootContainer != null && rootContainer.childCount == 0))
             {
                 GenerateSelectedPreset();
             }
@@ -100,8 +100,21 @@ namespace Sperlich.UISystem.Testing
         {
             if (!Application.isPlaying) return;
 
-            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Delete))
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Delete) || UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Backspace))
             {
+                if (activeVirtualView == null && rootContainer != null)
+                {
+                    activeVirtualView = rootContainer.GetComponentInChildren<VirtualScrollView>();
+                }
+                if (currentAdapter == null)
+                {
+                    currentAdapter = GetComponent<SimpleTestScrollAdapter>();
+                }
+                if (activeStandardView == null && rootContainer != null)
+                {
+                    activeStandardView = rootContainer.GetComponentInChildren<ScrollView>();
+                }
+
                 if (activeVirtualView != null && currentAdapter != null && currentAdapter.SelectedIndex >= 0)
                 {
                     currentAdapter.RemoveSelected();
