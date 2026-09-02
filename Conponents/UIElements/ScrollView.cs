@@ -26,12 +26,42 @@ namespace Sperlich.UISystem.Conponents.UIElements
     public class ScrollView : MonoBehaviour, IScrollHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("References")]
+        [SerializeField] private RectTransform _viewportRect;
+        /// <summary>
+        /// Das optionale RectTransform des Mask-Viewports. Wenn nicht gesetzt, wird automatisch das eigene RectTransform verwendet.
+        /// </summary>
+        public RectTransform ViewportRect
+        {
+            get
+            {
+                if (_viewportRect != null) return _viewportRect;
+                if (_cachedViewportRect == null) _cachedViewportRect = GetComponent<RectTransform>();
+                return _cachedViewportRect;
+            }
+            set => _viewportRect = value;
+        }
+        /// <summary>
+        /// Das RectTransform, das die scrollbaren Kind-Elemente oder Layout-Container enthält.
+        /// </summary>
         [Tooltip("Das RectTransform, das die scrollbaren Kind-Elemente oder Layout-Container enthält.")]
         public RectTransform ContentRect;
+        /// <summary>
+        /// Optionales UI-Item Prefab für diese ScrollView.
+        /// </summary>
+        [Tooltip("Optionales UI-Item Prefab für diese ScrollView.")]
+        public GameObject ItemPrefab;
 
         [Header("Scrollbars (Optional)")]
         [SerializeField] private UIScrollbar _verticalScrollbar;
         [SerializeField] private UIScrollbar _horizontalScrollbar;
+        /// <summary>
+        /// Sichtbarkeitsmodus der vertikalen Scrollbar.
+        /// </summary>
+        public ScrollbarVisibilityMode VerticalScrollbarVisibility = ScrollbarVisibilityMode.Permanent;
+        /// <summary>
+        /// Sichtbarkeitsmodus der horizontalen Scrollbar.
+        /// </summary>
+        public ScrollbarVisibilityMode HorizontalScrollbarVisibility = ScrollbarVisibilityMode.Permanent;
 
         public UIScrollbar VerticalScrollbar
         {
@@ -76,19 +106,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
         public float MaxOverscrollDistance = 100f;
         public float ElasticityBounceSpeed = 15f;
 
-        private RectTransform _viewportRect;
-        private RectTransform ViewportRect
-        {
-            get
-            {
-                if (_viewportRect == null)
-                {
-                    _viewportRect = GetComponent<RectTransform>();
-                }
-                return _viewportRect;
-            }
-        }
-
+        private RectTransform _cachedViewportRect;
         private Vector2 _currentScroll = Vector2.zero; // X = horizontaler Offset, Y = vertikaler Offset
         private Vector2 _velocity = Vector2.zero;
         private bool _isDragging = false;
@@ -97,7 +115,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void Awake()
         {
-            _viewportRect = GetComponent<RectTransform>();
+            if (_cachedViewportRect == null) _cachedViewportRect = GetComponent<RectTransform>();
             FetchLayoutContainer();
         }
 
@@ -192,7 +210,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         private void Update()
         {
-            if (ContentRect == null || _viewportRect == null) return;
+            if (ContentRect == null || ViewportRect == null) return;
 
             if (AutoSizeFromLayout)
             {
@@ -298,18 +316,54 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             Vector2 maxScroll = GetMaxScroll();
 
-            if (_verticalScrollbar != null && maxScroll.y > 0f)
+            // 1. Vertikale Scrollbar Sichtbarkeit & Update
+            if (_verticalScrollbar != null)
             {
-                float ratio = _currentScroll.y / maxScroll.y;
-                float visibleRatio = ViewportRect.rect.height / ContentRect.rect.height;
-                _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                bool isDirVertical = Direction == ScrollDirection.Vertical || Direction == ScrollDirection.Both;
+                bool shouldShow = false;
+
+                if (isDirVertical && VerticalScrollbarVisibility != ScrollbarVisibilityMode.Hide)
+                {
+                    if (VerticalScrollbarVisibility == ScrollbarVisibilityMode.Permanent)
+                        shouldShow = true;
+                    else if (VerticalScrollbarVisibility == ScrollbarVisibilityMode.AutoHide)
+                        shouldShow = maxScroll.y > 0.01f;
+                }
+
+                if (_verticalScrollbar.gameObject.activeSelf != shouldShow)
+                    _verticalScrollbar.gameObject.SetActive(shouldShow);
+
+                if (shouldShow)
+                {
+                    float ratio = maxScroll.y > 0f ? _currentScroll.y / maxScroll.y : 0f;
+                    float visibleRatio = ContentRect != null && ContentRect.rect.height > 0f ? ViewportRect.rect.height / ContentRect.rect.height : 1f;
+                    _verticalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                }
             }
 
-            if (_horizontalScrollbar != null && maxScroll.x > 0f)
+            // 2. Horizontale Scrollbar Sichtbarkeit & Update
+            if (_horizontalScrollbar != null)
             {
-                float ratio = _currentScroll.x / maxScroll.x;
-                float visibleRatio = ViewportRect.rect.width / ContentRect.rect.width;
-                _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                bool isDirHorizontal = Direction == ScrollDirection.Horizontal || Direction == ScrollDirection.Both;
+                bool shouldShow = false;
+
+                if (isDirHorizontal && HorizontalScrollbarVisibility != ScrollbarVisibilityMode.Hide)
+                {
+                    if (HorizontalScrollbarVisibility == ScrollbarVisibilityMode.Permanent)
+                        shouldShow = true;
+                    else if (HorizontalScrollbarVisibility == ScrollbarVisibilityMode.AutoHide)
+                        shouldShow = maxScroll.x > 0.01f;
+                }
+
+                if (_horizontalScrollbar.gameObject.activeSelf != shouldShow)
+                    _horizontalScrollbar.gameObject.SetActive(shouldShow);
+
+                if (shouldShow)
+                {
+                    float ratio = maxScroll.x > 0f ? _currentScroll.x / maxScroll.x : 0f;
+                    float visibleRatio = ContentRect != null && ContentRect.rect.width > 0f ? ViewportRect.rect.width / ContentRect.rect.width : 1f;
+                    _horizontalScrollbar.SetScrollRatio(ratio, visibleRatio);
+                }
             }
         }
 

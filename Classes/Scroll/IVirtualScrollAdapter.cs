@@ -9,7 +9,7 @@ namespace Sperlich.UISystem.Scroll
     public interface IVirtualScrollAdapter
     {
         /// <summary>
-        /// Liefert die Gesamtanzahl der Datensätze.
+        /// Liefert die Gesamtanzahl der Datensätze (nach aktiven Filtern).
         /// Anhand dieses Wertes berechnet die VirtualScrollView die Scroll-Höhe.
         /// </summary>
         int GetItemCount();
@@ -36,5 +36,22 @@ namespace Sperlich.UISystem.Scroll
         /// <param name="index">Der neue logische Listen-Index des Elements.</param>
         /// <param name="item">Das sichtbare RectTransform.</param>
         void RebindItem(int index, RectTransform item) { }
+
+        /// <summary>
+        /// Wird von der VirtualScrollView aufgerufen, wenn sich der Selektionszustand eines Items ändert
+        /// oder wenn ein Item aus dem Pool geholt wird und sein aktueller Zustand gesetzt werden muss.
+        /// Das externe System soll hier z.B. einen Highlight-Rahmen aktivieren oder deaktivieren.
+        /// </summary>
+        /// <param name="index">Der logische Listen-Index des Items.</param>
+        /// <param name="item">Das RectTransform des Items.</param>
+        /// <param name="isSelected">True wenn das Item selektiert ist, sonst false.</param>
+        void OnItemSelectionChanged(int index, RectTransform item, bool isSelected) { }
+
+        /// <summary>
+        /// Optional: Setzt einen Text-Filter. Die View ruft danach RebuildLayout() auf.
+        /// Implementierung im Adapter ändert, was GetItemCount() und GetItem() zurückgeben.
+        /// </summary>
+        /// <param name="query">Der Suchbegriff. Leer = kein Filter aktiv.</param>
+        void SetFilter(string query) { }
     }
 }

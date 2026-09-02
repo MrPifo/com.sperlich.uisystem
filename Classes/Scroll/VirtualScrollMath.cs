@@ -196,6 +196,80 @@ namespace Sperlich.UISystem.Scroll
 
         #endregion
 
+        #region Row Grid (Horizontal Scrolling)
+
+        /// <summary>
+        /// Berechnet die sichtbaren Indizes für ein mehrzeiliges, horizontal scrollendes Grid.
+        /// </summary>
+        public static void CalculateHorizontalGridVisibleIndices(
+            float scrollOffset,
+            float viewportWidth,
+            float itemWidth,
+            float spacingX,
+            int rows,
+            int itemCount,
+            out int startIndex,
+            out int endIndex)
+        {
+            if (itemCount == 0 || rows <= 0)
+            {
+                startIndex = -1;
+                endIndex = -1;
+                return;
+            }
+
+            float totalColWidth = itemWidth + spacingX;
+            if (totalColWidth <= 0f)
+            {
+                startIndex = 0;
+                endIndex = itemCount - 1;
+                return;
+            }
+
+            int totalCols = Mathf.CeilToInt((float)itemCount / rows);
+            int rawStartCol = Mathf.FloorToInt(scrollOffset / totalColWidth);
+            int visibleCols = Mathf.CeilToInt(viewportWidth / totalColWidth);
+
+            int startCol = Mathf.Clamp(rawStartCol - 1, 0, totalCols - 1);
+            int endCol = Mathf.Clamp(rawStartCol + visibleCols + 1, 0, totalCols - 1);
+
+            startIndex = startCol * rows;
+            endIndex = Mathf.Min(itemCount - 1, (endCol + 1) * rows - 1);
+        }
+
+        /// <summary>
+        /// Berechnet die Gesamtbreite des Contents für ein mehrzeiliges horizontales Grid.
+        /// </summary>
+        public static float CalculateHorizontalGridContentWidth(int itemCount, float itemWidth, float spacingX, int rows)
+        {
+            if (itemCount == 0 || rows <= 0) return 0f;
+            int totalCols = Mathf.CeilToInt((float)itemCount / rows);
+            return (totalCols * itemWidth) + ((totalCols - 1) * spacingX);
+        }
+
+        /// <summary>
+        /// Berechnet die lokale 2D-Position (X, Y) eines horizontalen Grid-Elements (nach Spalten geordnet).
+        /// </summary>
+        public static Vector2 CalculateHorizontalGridLocalPosition(
+            int index,
+            int rows,
+            Vector2 itemSize,
+            Vector2 spacing,
+            Vector2 paddingOffset = default)
+        {
+            if (rows <= 0) return Vector2.zero;
+
+            int col = index / rows;
+            int row = index % rows;
+
+            float x = paddingOffset.x + col * (itemSize.x + spacing.x);
+            float y = -paddingOffset.y - (row * (itemSize.y + spacing.y));
+
+            return new Vector2(x, y);
+        }
+
+        #endregion
+
         #region 2D Matrix Grid (Both Scrolling)
 
         /// <summary>

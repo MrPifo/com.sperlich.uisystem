@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	public static class SperlichUIEditorStyle {
 
 		public static readonly Color ActiveColor = new Color(0.196f, 0.804f, 0.196f);

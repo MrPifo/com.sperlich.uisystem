@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	[CustomEditor(typeof(Navigator), true)]
 	[CanEditMultipleObjects]
 	public class NavigatorEditor : UnityEditor.Editor {
