@@ -16,7 +16,7 @@ namespace Sperlich.UISystem.Scroll.Testing
     /// </summary>
     public class DummyCardItem : UIBehaviour
     {
-        public Text TitleText;
+        public UnityEngine.UI.Text TitleText;
         public Image Background;
     }
 
