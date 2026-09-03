@@ -1,5 +1,5 @@
+using Sperlich.Text;
 using Sperlich.UISystem.Themes;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -17,18 +17,18 @@ namespace Sperlich.UISystem {
 		public float fadeSpeed = 0.12f;
 		public ColorThemeAsset txtColor;
 		[SerializeField]
-		private TMP_Text _text;
+		private SText _text;
 		[SerializeField]
 		private UnityEvent onPressEvent;
 
-		public TMP_Text Text => _text;
+		public SText Text => _text;
 		public UnityEvent OnPressEvent => onPressEvent;
 
 		protected override void FetchComponents() {
 			base.FetchComponents();
 
 			if (_text == null) {
-				_text = GetComponentInChildren<TMP_Text>();
+				_text = GetComponentInChildren<SText>();
 			}
 			if (_text != null) {
 				if (txtColor != null) {

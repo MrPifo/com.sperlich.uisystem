@@ -1,4 +1,4 @@
-using TMPro;
+using Sperlich.Text;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -21,9 +21,9 @@ namespace Sperlich.UISystem.Editor {
 			SerializedProperty textProp = serializedObject.FindProperty("text");
 			SerializedProperty btnThemeProp = serializedObject.FindProperty("btnTheme");
 			SerializedProperty textColorsProp = serializedObject.FindProperty("textColors");
+			SerializedProperty onClickEventProp = serializedObject.FindProperty("onClickEvent");
 			SerializedProperty animationSpeedProp = serializedObject.FindProperty("animationSpeed");
 			SerializedProperty animationScaleProp = serializedObject.FindProperty("animationScale");
-			SerializedProperty onClickEventProp = serializedObject.FindProperty("onClickEvent");
 
 			root.Add(new PropertyField(stateProp));
 
@@ -39,17 +39,17 @@ namespace Sperlich.UISystem.Editor {
 			var textContentField = new TextField { multiline = true };
 			textContentField.style.minHeight = 60;
 			textContentField.RegisterValueChangedCallback(evt => {
-				if (textProp.objectReferenceValue is TMP_Text textComp) {
+				if (textProp.objectReferenceValue is SText textComp) {
 					Undo.RecordObject(textComp, "Change Button Text");
-					textComp.text = evt.newValue;
+					textComp.Text = evt.newValue;
 					EditorUtility.SetDirty(textComp);
 				}
 			});
 			textContentContainer.Add(textContentField);
 
 			void RefreshTextContentField(SerializedProperty prop) {
-				if (prop.objectReferenceValue is TMP_Text textComp) {
-					textContentField.SetValueWithoutNotify(textComp.text);
+				if (prop.objectReferenceValue is SText textComp) {
+					textContentField.SetValueWithoutNotify(textComp.Text);
 					textContentContainer.style.display = DisplayStyle.Flex;
 				} else {
 					textContentContainer.style.display = DisplayStyle.None;

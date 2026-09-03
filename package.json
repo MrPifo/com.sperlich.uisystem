@@ -20,6 +20,7 @@
                  ],
     "dependencies":  {
                          "com.sperlich.layout":  "https://github.com/MrPifo/com.sperlich.layout.git",
+                         "com.sperlich.text":  "https://github.com/MrPifo/com.sperlich.text.git",
                          "com.sperlich.prefabmanager":  "https://github.com/MrPifo/com.sperlich.prefabmanager.git",
                          "com.cysharp.unitask":  "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
                      }

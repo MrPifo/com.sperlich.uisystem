@@ -1,6 +1,6 @@
 using PrimeTween;
+using Sperlich.Text;
 using Sperlich.UISystem.Themes;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -20,7 +20,7 @@ namespace Sperlich.UISystem {
 		[SerializeField]
 		private Image btnImage;
 		[SerializeField]
-		private TMP_Text text;
+		private SText text;
 
 		[SerializeField]
 		protected float animationSpeed = 0.2f;
@@ -33,7 +33,7 @@ namespace Sperlich.UISystem {
 		protected bool HasText => text != null;
 		protected bool HasBG => btnImage != null;
 		public Material ImgMaterial => HasBG ? btnImage.material : null;
-		public TMP_Text Text => text;
+		public SText Text => text;
 		public Image Image => btnImage;
 		public UnityEvent OnClickEvent => onClickEvent;
 		public ColorThemeAsset BtnTheme => btnTheme;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
-using TMPro;
+using Sperlich.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -19,9 +19,9 @@ namespace Sperlich.UISystem {
 		[SerializeField]
 		protected RectTransform modalTransform;
 		[SerializeField]
-		protected TMP_Text titleText;
+		protected SText titleText;
 		[SerializeField]
-		protected TMP_Text bodyText;
+		protected SText bodyText;
 		[SerializeField]
 		protected Button confirmBtn;
 		[SerializeField]

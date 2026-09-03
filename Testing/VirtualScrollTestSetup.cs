@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using Sperlich.Text;
 using Sperlich.UISystem.Conponents.UIElements;
 using Sperlich.UISystem.Scroll;
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -207,21 +207,21 @@ namespace Sperlich.UISystem.Testing
             panelGo.transform.SetParent(rootContainer, false);
             var rt = panelGo.GetComponent<RectTransform>(); rt.sizeDelta = size; rt.anchoredPosition = Vector2.zero;
             panelGo.GetComponent<Image>().color = new Color(0.12f, 0.13f, 0.17f, 0.95f);
-            var titleGo = new GameObject("HeaderTitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var titleGo = new GameObject("HeaderTitle", typeof(RectTransform), typeof(SText));
             titleGo.transform.SetParent(rt, false);
             var titleRt = titleGo.GetComponent<RectTransform>();
             titleRt.anchorMin = new Vector2(0f, 1f); titleRt.anchorMax = new Vector2(1f, 1f); titleRt.pivot = new Vector2(0f, 1f);
             titleRt.anchoredPosition = new Vector2(16f, -12f); titleRt.sizeDelta = new Vector2(-32f, 22f);
-            var titleTmp = titleGo.GetComponent<TextMeshProUGUI>();
-            titleTmp.text = title; titleTmp.fontSize = 15f; titleTmp.fontStyle = FontStyles.Bold; titleTmp.color = Color.white;
-            var hintGo = new GameObject("Hint", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var titleTmp = titleGo.GetComponent<SText>();
+            titleTmp.Text = title; titleTmp.FontSize = 15f; titleTmp.FontStyle = TextFontStyle.Bold; titleTmp.color = Color.white;
+            var hintGo = new GameObject("Hint", typeof(RectTransform), typeof(SText));
             hintGo.transform.SetParent(rt, false);
             var hintRt = hintGo.GetComponent<RectTransform>();
             hintRt.anchorMin = new Vector2(0f, 1f); hintRt.anchorMax = new Vector2(1f, 1f); hintRt.pivot = new Vector2(0f, 1f);
             hintRt.anchoredPosition = new Vector2(16f, -36f); hintRt.sizeDelta = new Vector2(-32f, 18f);
-            var hintTmp = hintGo.GetComponent<TextMeshProUGUI>();
-            hintTmp.text = "Klicken=Select | [DEL]=Delete | [INS]=Insert | [T]=Top | [E]=End";
-            hintTmp.fontSize = 11f; hintTmp.color = new Color(0.7f, 0.75f, 0.85f, 0.85f);
+            var hintTmp = hintGo.GetComponent<SText>();
+            hintTmp.Text = "Klicken=Select | [DEL]=Delete | [INS]=Insert | [T]=Top | [E]=End";
+            hintTmp.FontSize = 11f; hintTmp.color = new Color(0.7f, 0.75f, 0.85f, 0.85f);
             return rt;
         }
 
@@ -299,11 +299,11 @@ namespace Sperlich.UISystem.Testing
             var flexEl = cardGo.GetComponent<FlexElement>();
             if (isHorizontal) { flexEl.Width = FlexSize.Pixels(160f); flexEl.Height = FlexSize.Percent(100f); }
             else { flexEl.Height = FlexSize.Pixels(customHeight); flexEl.Width = FlexSize.Percent(100f); }
-            var textGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(SText));
             textGo.transform.SetParent(cardGo.transform, false);
             var textRt = textGo.GetComponent<RectTransform>(); textRt.anchorMin = Vector2.zero; textRt.anchorMax = Vector2.one;
             textRt.offsetMin = new Vector2(12f, 0f); textRt.offsetMax = new Vector2(-12f, 0f);
-            var tmp = textGo.GetComponent<TextMeshProUGUI>(); tmp.text = "Card #" + (index + 1); tmp.fontSize = 14f; tmp.color = Color.white; tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            var tmp = textGo.GetComponent<SText>(); tmp.Text = "Card #" + (index + 1); tmp.FontSize = 14f; tmp.color = Color.white; tmp.Align = TextAlign.Left; tmp.VerticalAlign = TextVerticalAlign.Middle;
             var click = cardGo.GetComponent<TestScrollItemClick>();
             click.OnClick = () =>
             {
@@ -403,10 +403,10 @@ namespace Sperlich.UISystem.Testing
         private void BindItem(RectTransform item, int index)
         {
             int id = index < m_filtered.Count ? m_filtered[index] : index;
-            var t = item.Find("Title")?.GetComponent<TextMeshProUGUI>();
-            var s = item.Find("SubText")?.GetComponent<TextMeshProUGUI>();
-            if (t != null) t.text = m_isGrid ? ("Cell #" + (id + 1)) : ("Rank #" + (index + 1) + " - Player_" + id.ToString("D4"));
-            if (s != null) s.text = m_isGrid ? ("Lv. " + ((id % 50) + 1)) : ("Score: " + (10000 - id * 7).ToString("N0") + " pts");
+            var t = item.Find("Title")?.GetComponent<SText>();
+            var s = item.Find("SubText")?.GetComponent<SText>();
+            if (t != null) t.Text = m_isGrid ? ("Cell #" + (id + 1)) : ("Rank #" + (index + 1) + " - Player_" + id.ToString("D4"));
+            if (s != null) s.Text = m_isGrid ? ("Lv. " + ((id % 50) + 1)) : ("Score: " + (10000 - id * 7).ToString("N0") + " pts");
             var click = item.GetComponent<TestScrollItemClick>() ?? item.gameObject.AddComponent<TestScrollItemClick>();
             int ci = index;
             click.OnClick = () => m_scrollView?.SelectIndex(ci, toggle: m_scrollView.SelectionMode == ScrollSelectionMode.Multiple);
@@ -416,12 +416,12 @@ namespace Sperlich.UISystem.Testing
         {
             var go = new GameObject("ScrollItem", typeof(RectTransform), typeof(Image), typeof(TestScrollItemClick));
             var rt = go.GetComponent<RectTransform>(); go.GetComponent<Image>().color = new Color(0.2f, 0.25f, 0.35f, 1f);
-            var tGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI)); tGo.transform.SetParent(rt, false);
+            var tGo = new GameObject("Title", typeof(RectTransform), typeof(SText)); tGo.transform.SetParent(rt, false);
             var tRt = tGo.GetComponent<RectTransform>(); tRt.anchorMin = new Vector2(0f, 0.5f); tRt.anchorMax = new Vector2(1f, 1f); tRt.offsetMin = new Vector2(8f, 0f); tRt.offsetMax = new Vector2(-8f, -4f);
-            var tTmp = tGo.GetComponent<TextMeshProUGUI>(); tTmp.fontSize = 13f; tTmp.fontStyle = FontStyles.Bold; tTmp.color = Color.white;
-            var sGo = new GameObject("SubText", typeof(RectTransform), typeof(TextMeshProUGUI)); sGo.transform.SetParent(rt, false);
+            var tTmp = tGo.GetComponent<SText>(); tTmp.FontSize = 13f; tTmp.FontStyle = TextFontStyle.Bold; tTmp.color = Color.white;
+            var sGo = new GameObject("SubText", typeof(RectTransform), typeof(SText)); sGo.transform.SetParent(rt, false);
             var sRt = sGo.GetComponent<RectTransform>(); sRt.anchorMin = new Vector2(0f, 0f); sRt.anchorMax = new Vector2(1f, 0.5f); sRt.offsetMin = new Vector2(8f, 4f); sRt.offsetMax = new Vector2(-8f, 0f);
-            var sTmp = sGo.GetComponent<TextMeshProUGUI>(); sTmp.fontSize = 11f; sTmp.color = new Color(0.8f, 0.85f, 0.9f, 0.8f);
+            var sTmp = sGo.GetComponent<SText>(); sTmp.FontSize = 11f; sTmp.color = new Color(0.8f, 0.85f, 0.9f, 0.8f);
             return rt;
         }
     }

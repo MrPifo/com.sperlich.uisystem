@@ -1,6 +1,6 @@
 using PrimeTween;
+using Sperlich.Text;
 using Sperlich.UISystem.Themes;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,7 +19,7 @@ namespace Sperlich.UISystem {
 		[SerializeField]
 		private Image iconImage;
 		[SerializeField]
-		private TMP_Text text;
+		private SText text;
 		[SerializeField]
 		private SubMenuTabNavigator tabNavigator;
 
@@ -28,7 +28,7 @@ namespace Sperlich.UISystem {
 		protected bool HasText => text != null;
 		protected bool HasBG => btnImage != null;
 		public Material ImgMaterial => btnImage.material;
-		public TMP_Text Text => text;
+		public SText Text => text;
 		public Image Image => btnImage;
 
 		public const Ease FadeInEase = Ease.OutBounce;

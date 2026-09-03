@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using PrimeTween;
-using TMPro;
+using Sperlich.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
