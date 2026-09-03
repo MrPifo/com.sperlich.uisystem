@@ -21,6 +21,8 @@ namespace Sperlich.UISystem {
 		private Image btnImage;
 		[SerializeField]
 		private SText text;
+		[SerializeField]
+		private Transform animContainer;
 
 		[SerializeField]
 		protected float animationSpeed = 0.2f;
@@ -29,6 +31,8 @@ namespace Sperlich.UISystem {
 
 		private Material instancedMaterial;
 		private Tween scaleTween;
+
+		public Transform AnimTarget => animContainer != null ? animContainer : transform;
 
 		protected bool HasText => text != null;
 		protected bool HasBG => btnImage != null;
@@ -66,52 +70,50 @@ namespace Sperlich.UISystem {
 		}
 		protected virtual void OnEnable() {
 			scaleTween.Stop();
-			transform.localScale = Vector3.one;
+			AnimTarget.localScale = Vector3.one;
 		}
 		protected virtual void OnDisable() {
 			scaleTween.Stop();
-			transform.localScale = Vector3.one;
+			AnimTarget.localScale = Vector3.one;
 		}
 		protected internal override void OnStateChanged(ComponentState state) {
 			base.OnStateChanged(state);
 
-			if (state == ComponentState.Disabled) {
-				OnVisualsChanged(IsState(ComponentState.Disabled) ? ComponentState.Disabled : ComponentState.Normal);
+			if (state == ComponentState.Hovered || state == ComponentState.Selected) {
+				AnimateEnter();
+			} else if (state == ComponentState.Normal) {
+				AnimateExit();
 			}
 		}
 
 		#region Events
 		protected override void OnSelect(EventData evt) {
-			OnVisualsChanged(ComponentState.Selected);
-			AnimateEnter();
+			if (IsInteractable) {
+				OnVisualsChanged(ComponentState.Selected);
+			}
 		}
 		protected override void OnDeselect(EventData evt) {
-			OnVisualsChanged(ComponentState.Normal);
-			AnimateExit();
+			if (IsInteractable) {
+				OnVisualsChanged(ComponentState.Normal);
+			}
 		}
 		protected virtual void PointerEnter(EventData evt) {
-			OnVisualsChanged(ComponentState.Hovered);
-			AnimateEnter();
+			if (IsInteractable) {
+				OnVisualsChanged(ComponentState.Hovered);
+			}
 		}
 		protected virtual void PointerExit(EventData evt) {
-			if(IsSelected) {
-				OnVisualsChanged(ComponentState.Selected);
-			} else {
+			if (IsInteractable) {
 				OnVisualsChanged(ComponentState.Normal);
-
-				AnimateExit();
 			}
 		}
 		protected virtual void PointerDown(EventData evt) {
-			OnVisualsChanged(ComponentState.Pressed);
+			if (IsInteractable) {
+				OnVisualsChanged(ComponentState.Pressed);
+			}
 		}
 		protected virtual void PointerUp(EventData evt) {
-			if(IsHovered == false) {
-				OnVisualsChanged(ComponentState.Normal);
-				AnimateExit();
-			} else if (IsSelected) {
-				OnVisualsChanged(ComponentState.Selected);
-			} else {
+			if (IsInteractable) {
 				OnVisualsChanged(ComponentState.Hovered);
 			}
 		}
@@ -122,11 +124,11 @@ namespace Sperlich.UISystem {
 
 		protected virtual void AnimateEnter() {
 			scaleTween.Stop();
-			scaleTween = Tween.Scale(transform, animationScale, animationSpeed, Ease.InOutCirc);
+			scaleTween = Tween.Scale(AnimTarget, animationScale, animationSpeed, Ease.InOutCirc);
 		}
 		protected virtual void AnimateExit() {
 			scaleTween.Stop();
-			scaleTween = Tween.Scale(transform, 1f, animationSpeed, Ease.InOutCirc);
+			scaleTween = Tween.Scale(AnimTarget, 1f, animationSpeed, Ease.InOutCirc);
 		}
 
 		#region Component Helpers

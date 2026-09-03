@@ -24,12 +24,14 @@ namespace Sperlich.UISystem.Editor {
 			SerializedProperty onClickEventProp = serializedObject.FindProperty("onClickEvent");
 			SerializedProperty animationSpeedProp = serializedObject.FindProperty("animationSpeed");
 			SerializedProperty animationScaleProp = serializedObject.FindProperty("animationScale");
+			SerializedProperty animContainerProp = serializedObject.FindProperty("animContainer");
 
 			root.Add(new PropertyField(stateProp));
 
 			root.Add(SperlichUIEditorStyle.CreateSectionHeader("Visuals"));
 			root.Add(new PropertyField(btnImageProp));
 			root.Add(new PropertyField(textProp));
+			root.Add(new PropertyField(animContainerProp));
 
 			var textContentContainer = new VisualElement { style = { display = DisplayStyle.None, marginTop = 4, marginBottom = 4 } };
 			var textContentLabel = new Label("Text Content");
