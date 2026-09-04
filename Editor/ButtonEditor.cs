@@ -10,17 +10,17 @@ using UnityEngine.UIElements;
 namespace Sperlich.UISystem.Editor {
 	using FlexDirection = UnityEngine.UIElements.FlexDirection;
 
-	[CustomEditor(typeof(Button))]
+	[CustomEditor(typeof(Button), true)]
 	[CanEditMultipleObjects]
 	public class ButtonEditor : UnityEditor.Editor {
 
-		private static readonly Color Accent = SperlichEditorTheme.ButtonAccent;
+		protected static readonly Color Accent = SperlichEditorTheme.ButtonAccent;
 
 		static ColorThemeAsset clipboardBtnTheme;
 		static ColorThemeAsset clipboardTextColors;
 		static bool HasClipboardColors => clipboardBtnTheme != null || clipboardTextColors != null;
 
-		private readonly SperlichFieldColumn col = new(130f);
+		protected readonly SperlichFieldColumn col = new(130f);
 
 		public override VisualElement CreateInspectorGUI() {
 			var root = new VisualElement {
@@ -207,7 +207,7 @@ namespace Sperlich.UISystem.Editor {
 			return root;
 		}
 
-		private static VisualElement Section(VisualElement parent, string title, bool expanded) {
+		protected static VisualElement Section(VisualElement parent, string title, bool expanded) {
 			var (header, body, _) = SperlichEditorWidgets.CreateChevronSection(title, expanded, SperlichEditorTheme.BgStep, null, nameof(ButtonEditor));
 			body.style.paddingLeft = 6;
 			body.style.paddingRight = 6;
