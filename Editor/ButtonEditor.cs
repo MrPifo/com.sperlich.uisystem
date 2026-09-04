@@ -1,20 +1,33 @@
+using Sperlich.EditorKit;
 using Sperlich.Text;
+using Sperlich.UISystem.Themes;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
-using Sperlich.UISystem.Themes;
 
 namespace Sperlich.UISystem.Editor {
 	[CustomEditor(typeof(Button))]
 	[CanEditMultipleObjects]
 	public class ButtonEditor : UnityEditor.Editor {
 
+		private static readonly Color Accent = SperlichEditorTheme.ButtonAccent;
+
 		static ColorThemeAsset clipboardBtnTheme;
 		static ColorThemeAsset clipboardTextColors;
 		static bool HasClipboardColors => clipboardBtnTheme != null || clipboardTextColors != null;
 
+		private readonly SperlichFieldColumn col = new(130f);
+
 		public override VisualElement CreateInspectorGUI() {
-			var root = new VisualElement();
+			var root = new VisualElement {
+				style = {
+					paddingTop = 2,
+					paddingBottom = 4,
+					marginLeft = -15,
+					marginRight = -4
+				}
+			};
 
 			SerializedProperty stateProp = serializedObject.FindProperty("state");
 			SerializedProperty btnImageProp = serializedObject.FindProperty("btnImage");
@@ -23,19 +36,57 @@ namespace Sperlich.UISystem.Editor {
 			SerializedProperty textColorsProp = serializedObject.FindProperty("textColors");
 			SerializedProperty onClickEventProp = serializedObject.FindProperty("onClickEvent");
 
-			root.Add(new PropertyField(stateProp));
+			// ---- State --------------------------------------------------------------------------
+			var stateSec = Section(root, "STATE", true);
+			stateSec.Add(col.Row("Component State", SperlichEditorWidgets.CreateEnumDropdown(stateProp, Accent, _ => {
+				foreach (var obj in serializedObject.targetObjects) {
+					if (obj is Button btn) {
+						btn.TrySetButtonColor(btn.State);
+						btn.TrySetTextColor(btn.State);
+						EditorUtility.SetDirty(btn);
+					}
+				}
+			})));
 
-			root.Add(SperlichUIEditorStyle.CreateSectionHeader("Visuals"));
-			root.Add(new PropertyField(btnImageProp));
-			root.Add(new PropertyField(textProp));
+			// ---- Visuals ------------------------------------------------------------------------
+			var visualsSec = Section(root, "VISUALS", true);
+			visualsSec.Add(col.Property(btnImageProp, "Image"));
+			visualsSec.Add(col.Property(textProp, "Text Component"));
 
-			var textContentContainer = new VisualElement { style = { display = DisplayStyle.None, marginTop = 4, marginBottom = 4 } };
-			var textContentLabel = new Label("Text Content");
-			textContentLabel.style.marginBottom = 2;
-			textContentContainer.Add(textContentLabel);
+			var textContentContainer = new VisualElement {
+				style = {
+					display = DisplayStyle.None,
+					marginTop = 4,
+					marginBottom = 4,
+					paddingLeft = 4,
+					paddingRight = 4,
+					paddingTop = 4,
+					paddingBottom = 4,
+					backgroundColor = SperlichEditorTheme.BgDark
+				}
+			};
+			SperlichEditorWidgets.SetRadius(textContentContainer, 4);
+
+			var textHeaderRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					justifyContent = Justify.SpaceBetween,
+					alignItems = Align.Center,
+					marginBottom = 3
+				}
+			};
+			var textContentLabel = new Label("Text Content") {
+				style = {
+					fontSize = 11,
+					unityFontStyleAndWeight = FontStyle.Bold,
+					color = SperlichEditorTheme.TextSecondary
+				}
+			};
+			textHeaderRow.Add(textContentLabel);
+			textContentContainer.Add(textHeaderRow);
 
 			var textContentField = new TextField { multiline = true };
-			textContentField.style.minHeight = 60;
+			textContentField.style.minHeight = 55;
 			textContentField.RegisterValueChangedCallback(evt => {
 				if (textProp.objectReferenceValue is SText textComp) {
 					Undo.RecordObject(textComp, "Change Button Text");
@@ -56,10 +107,15 @@ namespace Sperlich.UISystem.Editor {
 			RefreshTextContentField(textProp);
 			root.TrackPropertyValue(textProp, RefreshTextContentField);
 
-			root.Add(textContentContainer);
+			visualsSec.Add(textContentContainer);
 
-			VisualElement colorsHeader = SperlichUIEditorStyle.CreateSectionHeader("Colors");
-			root.Add(colorsHeader);
+			// ---- Colors -------------------------------------------------------------------------
+			var (colorsHeader, colorsBody, _) = SperlichEditorWidgets.CreateChevronSection("COLORS", true, SperlichEditorTheme.BgStep, null, nameof(ButtonEditor));
+			colorsBody.style.paddingLeft = 6;
+			colorsBody.style.paddingRight = 6;
+			colorsBody.style.paddingTop = 4;
+			colorsBody.style.paddingBottom = 6;
+
 			colorsHeader.AddManipulator(new ContextualMenuManipulator(evt => {
 				evt.menu.AppendAction("Copy Colors", _ => {
 					clipboardBtnTheme = btnThemeProp.objectReferenceValue as ColorThemeAsset;
@@ -73,10 +129,16 @@ namespace Sperlich.UISystem.Editor {
 				}, HasClipboardColors ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 			}));
 
-			var btnThemeField = new PropertyField(btnThemeProp);
-			var textColorsField = new PropertyField(textColorsProp);
-			root.Add(btnThemeField);
-			root.Add(textColorsField);
+			var colorsWrap = new VisualElement { style = { marginBottom = 4 } };
+			colorsWrap.Add(colorsHeader);
+			colorsWrap.Add(colorsBody);
+			root.Add(colorsWrap);
+
+			VisualElement btnThemeDropdown = SperlichEditorWidgets.CreateAssetDropdown<ColorThemeAsset>(btnThemeProp, Accent);
+			VisualElement textColorsDropdown = SperlichEditorWidgets.CreateAssetDropdown<ColorThemeAsset>(textColorsProp, Accent);
+
+			colorsBody.Add(col.Row("Button Theme", btnThemeDropdown));
+			colorsBody.Add(col.Row("Text Colors", textColorsDropdown));
 
 			void ApplyNormalColorPreview(SerializedProperty prop) {
 				foreach (var obj in serializedObject.targetObjects) {
@@ -102,14 +164,30 @@ namespace Sperlich.UISystem.Editor {
 					}
 				}
 			}
-			btnThemeField.RegisterValueChangeCallback(evt => ApplyNormalColorPreview(evt.changedProperty));
-			textColorsField.RegisterValueChangeCallback(evt => ApplyNormalColorPreview(evt.changedProperty));
+			root.TrackPropertyValue(btnThemeProp, ApplyNormalColorPreview);
+			root.TrackPropertyValue(textColorsProp, ApplyNormalColorPreview);
 
-			Foldout eventFoldout = SperlichUIEditorStyle.CreateFoldoutSection("Button.Event", "Event");
-			root.Add(eventFoldout);
-			eventFoldout.Add(new PropertyField(onClickEventProp));
+			// ---- Events -------------------------------------------------------------------------
+			var eventsSec = Section(root, "EVENTS", true);
+			eventsSec.Add(new PropertyField(onClickEventProp));
+
+			// preserve scroll across inspector rebuilds
+			SperlichInspectorScroll.Preserve(root, target);
 
 			return root;
+		}
+
+		private static VisualElement Section(VisualElement parent, string title, bool expanded) {
+			var (header, body, _) = SperlichEditorWidgets.CreateChevronSection(title, expanded, SperlichEditorTheme.BgStep, null, nameof(ButtonEditor));
+			body.style.paddingLeft = 6;
+			body.style.paddingRight = 6;
+			body.style.paddingTop = 4;
+			body.style.paddingBottom = 6;
+			var wrap = new VisualElement { style = { marginBottom = 4 } };
+			wrap.Add(header);
+			wrap.Add(body);
+			parent.Add(wrap);
+			return body;
 		}
 	}
 }
