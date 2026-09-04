@@ -122,6 +122,11 @@ namespace Sperlich.UISystem {
 			get => Instance.targetCancelHandler;
 			set => Instance.targetCancelHandler = value;
 		}
+
+		public static bool Button(NavAction action) => InputProvider != null && InputProvider.GetButton(action);
+		public static bool ButtonDown(NavAction action) => InputProvider != null && InputProvider.GetButtonDown(action);
+		public static bool ButtonUp(NavAction action) => InputProvider != null && InputProvider.GetButtonUp(action);
+		public static float Axis(NavAction action) => InputProvider != null ? InputProvider.GetAxis(action) : 0f;
 		#endregion
 
 		void Awake() {
