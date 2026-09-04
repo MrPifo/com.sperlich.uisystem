@@ -22,16 +22,12 @@ namespace Sperlich.UISystem.Editor {
 			SerializedProperty btnThemeProp = serializedObject.FindProperty("btnTheme");
 			SerializedProperty textColorsProp = serializedObject.FindProperty("textColors");
 			SerializedProperty onClickEventProp = serializedObject.FindProperty("onClickEvent");
-			SerializedProperty animationSpeedProp = serializedObject.FindProperty("animationSpeed");
-			SerializedProperty animationScaleProp = serializedObject.FindProperty("animationScale");
-			SerializedProperty animContainerProp = serializedObject.FindProperty("animContainer");
 
 			root.Add(new PropertyField(stateProp));
 
 			root.Add(SperlichUIEditorStyle.CreateSectionHeader("Visuals"));
 			root.Add(new PropertyField(btnImageProp));
 			root.Add(new PropertyField(textProp));
-			root.Add(new PropertyField(animContainerProp));
 
 			var textContentContainer = new VisualElement { style = { display = DisplayStyle.None, marginTop = 4, marginBottom = 4 } };
 			var textContentLabel = new Label("Text Content");
@@ -108,10 +104,6 @@ namespace Sperlich.UISystem.Editor {
 			}
 			btnThemeField.RegisterValueChangeCallback(evt => ApplyNormalColorPreview(evt.changedProperty));
 			textColorsField.RegisterValueChangeCallback(evt => ApplyNormalColorPreview(evt.changedProperty));
-
-			root.Add(SperlichUIEditorStyle.CreateSectionHeader("Animation"));
-			root.Add(new PropertyField(animationSpeedProp));
-			root.Add(new PropertyField(animationScaleProp));
 
 			Foldout eventFoldout = SperlichUIEditorStyle.CreateFoldoutSection("Button.Event", "Event");
 			root.Add(eventFoldout);

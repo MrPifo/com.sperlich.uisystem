@@ -22,8 +22,8 @@ namespace Sperlich.UISystem.Editor
         {
             GameObject parent = GetOrCreateCanvasContext(menuCommand);
 
-            // 1. Parent mit Button, UIEvents und Navigator
-            var rootGo = new GameObject("Button", typeof(RectTransform), typeof(Button), typeof(UIEvents), typeof(Navigator));
+            // 1. Parent mit Button und Navigator
+            var rootGo = new GameObject("Button", typeof(RectTransform), typeof(Button), typeof(Navigator));
             GameObjectUtility.SetParentAndAlign(rootGo, parent);
             var rootRt = rootGo.GetComponent<RectTransform>();
             rootRt.sizeDelta = new Vector2(160f, 40f);
@@ -60,6 +60,11 @@ namespace Sperlich.UISystem.Editor
             textRt.anchoredPosition = Vector2.zero;
 
             var sText = textGo.GetComponent<SText>();
+            var settings = SperlichTextSettings.GetOrDefault();
+            if (settings != null && settings.defaultFont != null)
+            {
+                sText.Font = settings.defaultFont;
+            }
             sText.Text = "Button";
             sText.Align = TextAlign.Center;
             sText.VerticalAlign = TextVerticalAlign.Middle;
@@ -70,7 +75,6 @@ namespace Sperlich.UISystem.Editor
             var so = new SerializedObject(button);
             so.FindProperty("btnImage").objectReferenceValue = bgImage;
             so.FindProperty("text").objectReferenceValue = sText;
-            so.FindProperty("animContainer").objectReferenceValue = containerRt;
             so.ApplyModifiedProperties();
 
             Undo.RegisterCreatedObjectUndo(rootGo, "Create Button");

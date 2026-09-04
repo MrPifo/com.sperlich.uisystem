@@ -1,4 +1,3 @@
-using PrimeTween;
 using Sperlich.Text;
 using Sperlich.UISystem.Themes;
 using UnityEngine;
@@ -21,18 +20,8 @@ namespace Sperlich.UISystem {
 		private Image btnImage;
 		[SerializeField]
 		private SText text;
-		[SerializeField]
-		private Transform animContainer;
-
-		[SerializeField]
-		protected float animationSpeed = 0.2f;
-		[SerializeField]
-		protected float animationScale = 1.1f;
 
 		private Material instancedMaterial;
-		private Tween scaleTween;
-
-		public Transform AnimTarget => animContainer != null ? animContainer : transform;
 
 		protected bool HasText => text != null;
 		protected bool HasBG => btnImage != null;
@@ -62,27 +51,8 @@ namespace Sperlich.UISystem {
 		protected override void OnDestroy() {
 			base.OnDestroy();
 
-			scaleTween.Stop();
-
 			if (instancedMaterial != null) {
 				Destroy(instancedMaterial);
-			}
-		}
-		protected virtual void OnEnable() {
-			scaleTween.Stop();
-			AnimTarget.localScale = Vector3.one;
-		}
-		protected virtual void OnDisable() {
-			scaleTween.Stop();
-			AnimTarget.localScale = Vector3.one;
-		}
-		protected internal override void OnStateChanged(ComponentState state) {
-			base.OnStateChanged(state);
-
-			if (state == ComponentState.Hovered || state == ComponentState.Selected) {
-				AnimateEnter();
-			} else if (state == ComponentState.Normal) {
-				AnimateExit();
 			}
 		}
 
@@ -121,15 +91,6 @@ namespace Sperlich.UISystem {
 			onClickEvent.Invoke();
 		}
 		#endregion
-
-		protected virtual void AnimateEnter() {
-			scaleTween.Stop();
-			scaleTween = Tween.Scale(AnimTarget, animationScale, animationSpeed, Ease.InOutCirc);
-		}
-		protected virtual void AnimateExit() {
-			scaleTween.Stop();
-			scaleTween = Tween.Scale(AnimTarget, 1f, animationSpeed, Ease.InOutCirc);
-		}
 
 		#region Component Helpers
 		public bool TrySetButtonColor(ComponentState state) {
