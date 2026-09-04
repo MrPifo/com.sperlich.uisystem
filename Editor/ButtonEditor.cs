@@ -61,7 +61,7 @@ namespace Sperlich.UISystem.Editor {
 			};
 			stateSec.Add(col.Row("Interactable", interactableToggle));
 
-			stateSec.Add(col.Row("Component State", SperlichEditorWidgets.CreateEnumDropdown(stateProp, Accent, _ => {
+			stateSec.Add(col.Row("Component State", SperlichEditorWidgets.CreateFlagsDropdown(stateProp, Accent, _ => {
 				foreach (var obj in serializedObject.targetObjects) {
 					if (obj is Button btn) {
 						btn.TrySetButtonColor(btn.State);
