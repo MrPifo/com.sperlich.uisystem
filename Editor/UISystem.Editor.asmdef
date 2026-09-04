@@ -1,4 +1,4 @@
-{
+﻿{
     "name": "UISystem.Editor",
     "rootNamespace": "",
     "references": [
@@ -7,7 +7,10 @@
         "GUID:cf543715d3cda154abb960949704e03d",
         "GUID:37124e22ec38e6e47b2e7a1ec93856ef",
         "GUID:ca89b571b39a55c419521d7a8cdb2e22",
-        "Sperlich.EditorKit"
+        "GUID:8305c35bfbe3a8c42bb92e114f7cc663",
+        "Sperlich.EditorKit",
+        "Sperlich.Event",
+        "Sperlich.Event.Editor"
     ],
     "includePlatforms": [
         "Editor"

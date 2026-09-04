@@ -2,7 +2,8 @@
     "name": "Sperlich.UISystem.ColorTheme.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:bb3bfea11214b2c478b811c5e4791746"
+        "GUID:bb3bfea11214b2c478b811c5e4791746",
+        "GUID:b09593e52524e674992fb39466ec56fa"
     ],
     "includePlatforms": [
         "Editor"

@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
 
 	[CustomEditor(typeof(Navigator), true)]
 	[CanEditMultipleObjects]
@@ -102,7 +103,7 @@ namespace Sperlich.UISystem.Editor {
 			navSec.Add(crossBox);
 
 			// ---- Events -------------------------------------------------------------------------
-			var eventsSec = Section(root, "EVENTS", false);
+			var eventsSec = Section(root, "EVENTS", true);
 			eventsSec.Add(new PropertyField(onSelectProp));
 			eventsSec.Add(new PropertyField(onDeselectProp));
 			eventsSec.Add(new PropertyField(onSubmitProp));
@@ -158,31 +159,62 @@ namespace Sperlich.UISystem.Editor {
 			};
 			midRow.Add(CreateDirectionField("◄", left, fieldWidth, false));
 
+			// Center Crosshair Hub (Variante 1A mit Guide Lines & Center Box)
 			var hub = new VisualElement {
 				style = {
-					width = 20,
-					height = 20,
-					marginLeft = 4,
-					marginRight = 4,
-					backgroundColor = SperlichEditorTheme.BgStep,
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center,
+					marginLeft = 2,
+					marginRight = 2
+				}
+			};
+
+			var leftLine = new VisualElement {
+				style = {
+					width = 4,
+					height = 1,
+					backgroundColor = new Color(Accent.r, Accent.g, Accent.b, 0.4f)
+				}
+			};
+			var centerBox = new VisualElement {
+				style = {
+					width = 22,
+					height = 22,
+					backgroundColor = new Color(0.12f, 0.13f, 0.16f),
 					borderTopWidth = 1,
 					borderBottomWidth = 1,
 					borderLeftWidth = 1,
 					borderRightWidth = 1,
+					borderTopColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f),
+					borderBottomColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f),
+					borderLeftColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f),
+					borderRightColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f),
 					alignItems = Align.Center,
 					justifyContent = Justify.Center
 				}
 			};
-			SperlichEditorWidgets.SetBorderColor(hub, SperlichEditorTheme.BorderSubtle);
-			SperlichEditorWidgets.SetRadius(hub, 10);
-			var hubLabel = new Label("⦿") {
+			SperlichEditorWidgets.SetRadius(centerBox, 4);
+
+			var crosshairLabel = new Label("❖") {
 				style = {
-					fontSize = 9,
-					color = SperlichEditorTheme.TextMuted,
+					fontSize = 11,
+					color = Accent,
 					unityTextAlign = TextAnchor.MiddleCenter
 				}
 			};
-			hub.Add(hubLabel);
+			centerBox.Add(crosshairLabel);
+
+			var rightLine = new VisualElement {
+				style = {
+					width = 4,
+					height = 1,
+					backgroundColor = new Color(Accent.r, Accent.g, Accent.b, 0.4f)
+				}
+			};
+
+			hub.Add(leftLine);
+			hub.Add(centerBox);
+			hub.Add(rightLine);
 			midRow.Add(hub);
 
 			midRow.Add(CreateDirectionField("►", right, fieldWidth, true));
@@ -240,7 +272,8 @@ namespace Sperlich.UISystem.Editor {
 			var field = new ObjectField { objectType = typeof(Navigator), label = string.Empty };
 			field.BindProperty(prop);
 			field.labelElement.style.display = DisplayStyle.None;
-			field.style.flexGrow = 1;
+			field.style.width = width - 22; // badge(18) + margin(3) + 1px gap
+			field.style.flexShrink = 0;
 			field.style.marginLeft = 0;
 			field.style.marginRight = 0;
 

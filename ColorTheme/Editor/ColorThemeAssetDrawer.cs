@@ -1,156 +1,105 @@
+using Sperlich.EditorKit;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
-using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Themes.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	[CustomPropertyDrawer(typeof(ColorThemeAsset))]
 	public class ColorThemeAssetDrawer : PropertyDrawer {
-		// Dictionary zum Verfolgen des Foldout-Status pro Property-Pfad
-		private static Dictionary<string, bool> foldoutStates = new Dictionary<string, bool>();
+
+		public override VisualElement CreatePropertyGUI(SerializedProperty property) {
+			var container = new VisualElement {
+				style = {
+					marginTop = 2,
+					marginBottom = 2
+				}
+			};
+
+			var headerRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center
+				}
+			};
+
+			var objectField = new ObjectField(property.displayName) {
+				objectType = typeof(ColorThemeAsset)
+			};
+			objectField.BindProperty(property);
+			objectField.style.flexGrow = 1;
+			headerRow.Add(objectField);
+			container.Add(headerRow);
+
+			// Inline Farb-Vorschau bei vorhandenem Asset
+			var inlineContainer = new VisualElement {
+				style = {
+					marginTop = 3,
+					paddingLeft = 8,
+					paddingRight = 4,
+					paddingTop = 4,
+					paddingBottom = 4,
+					backgroundColor = SperlichEditorTheme.BgDark
+				}
+			};
+			SperlichEditorWidgets.SetRadius(inlineContainer, 4);
+
+			void UpdateInlineView(SerializedProperty prop) {
+				inlineContainer.Clear();
+				if (prop.objectReferenceValue is ColorThemeAsset asset) {
+					var so = new SerializedObject(asset);
+					var themeProp = so.FindProperty("theme");
+
+					var topRow = new VisualElement {
+						style = {
+							flexDirection = FlexDirection.Row,
+							justifyContent = Justify.SpaceBetween,
+							alignItems = Align.Center,
+							marginBottom = 3
+						}
+					};
+
+					var label = new Label("Theme Colors") {
+						style = {
+							fontSize = 11,
+							unityFontStyleAndWeight = FontStyle.Bold,
+							color = SperlichEditorTheme.TextSecondary
+						}
+					};
+					topRow.Add(label);
+
+					var resetBtn = SperlichEditorWidgets.MakeButton("Reset", 50, () => {
+						ColorThemeUtility.ResetToDefaults(themeProp);
+						EditorUtility.SetDirty(asset);
+					});
+					topRow.Add(resetBtn);
+					inlineContainer.Add(topRow);
+
+					inlineContainer.Add(ColorThemeUtility.CreateColorGrid(themeProp));
+					inlineContainer.style.display = DisplayStyle.Flex;
+				} else {
+					inlineContainer.style.display = DisplayStyle.None;
+				}
+			}
+
+			UpdateInlineView(property);
+			container.TrackPropertyValue(property, UpdateInlineView);
+			container.Add(inlineContainer);
+
+			return container;
+		}
 
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
+			// Fallback fr IMGUI
 			EditorGUI.BeginProperty(position, label, property);
-
-			// Hole einen eindeutigen Schlüssel für diese Property-Instanz
-			string propPath = property.propertyPath;
-			if (!foldoutStates.ContainsKey(propPath)) {
-				foldoutStates[propPath] = false;
-			}
-
-			// Prüfe, ob wir eine Referenz haben
-			bool hasReference = property.objectReferenceValue != null;
-
-			if (hasReference) {
-				ColorThemeAsset themeAsset = (ColorThemeAsset)property.objectReferenceValue;
-
-				// Berechne Rects für das Foldout, Label, Objektfeld und Reset-Button
-				float buttonWidth = 60f;
-				float spacing = 5f;
-
-				// Erstelle ein kombiniertes Rect für Foldout und Label
-				Rect foldoutAndLabelRect = new Rect(
-					position.x,
-					position.y,
-					EditorGUIUtility.labelWidth,
-					EditorGUIUtility.singleLineHeight
-				);
-
-				// Objektfeld in der Mitte
-				Rect objectFieldRect = new Rect(
-					position.x + EditorGUIUtility.labelWidth,
-					position.y,
-					position.width - EditorGUIUtility.labelWidth - buttonWidth - spacing,
-					EditorGUIUtility.singleLineHeight
-				);
-
-				// Reset-Button rechts
-				Rect resetButtonRect = new Rect(
-					position.x + position.width - buttonWidth,
-					position.y,
-					buttonWidth,
-					EditorGUIUtility.singleLineHeight
-				);
-
-				// Zeichne Foldout mit Label
-				foldoutStates[propPath] = EditorGUI.Foldout(foldoutAndLabelRect, foldoutStates[propPath], label, true);
-
-				// Zeichne Objektfeld
-				EditorGUI.BeginChangeCheck();
-				property.objectReferenceValue = EditorGUI.ObjectField(
-					objectFieldRect,
-					GUIContent.none,
-					property.objectReferenceValue,
-					typeof(ColorThemeAsset),
-					false
-				);
-				if (EditorGUI.EndChangeCheck()) {
-					property.serializedObject.ApplyModifiedProperties();
-				}
-
-				// Zeichne Reset-Button
-				if (GUI.Button(resetButtonRect, "Reset")) {
-					SerializedObject serializedThemeObj = new SerializedObject(themeAsset);
-					SerializedProperty themeProp = serializedThemeObj.FindProperty("theme");
-
-					// Das Theme zurücksetzen und Änderungen speichern
-					ColorThemeUtility.ResetToDefaults(themeProp);
-					EditorUtility.SetDirty(themeAsset);
-				}
-
-				// Wenn ausgeklappt, zeichne das ColorTheme
-				if (foldoutStates[propPath]) {
-					SerializedObject serializedThemeObj = new SerializedObject(themeAsset);
-					SerializedProperty themeProp = serializedThemeObj.FindProperty("theme");
-
-					// Hole den vollständigen Pfad für die verschachtelte Theme-Property
-					string nestedThemePath = themeProp.propertyPath;
-
-					try {
-						// Markiere diese Property als verschachtelt vor dem Zeichnen
-						ColorThemeUtility.NestedPropertyPaths.Add(nestedThemePath);
-
-						// Beginne mit der Überprüfung auf Änderungen
-						EditorGUI.BeginChangeCheck();
-
-						// Berechne Rect für die Theme-Property
-						Rect themeRect = new Rect(
-							position.x,
-							position.y + EditorGUIUtility.singleLineHeight + 2,
-							position.width,
-							EditorGUI.GetPropertyHeight(themeProp)
-						);
-
-						// Zeichne die Theme-Property ohne Label
-						EditorGUI.PropertyField(themeRect, themeProp, GUIContent.none);
-
-						// Wende Änderungen an, wenn modifiziert
-						if (EditorGUI.EndChangeCheck()) {
-							serializedThemeObj.ApplyModifiedProperties();
-							EditorUtility.SetDirty(themeAsset);
-						}
-					} finally {
-						// Entferne die Property immer aus dem Nested-Set, wenn fertig
-						ColorThemeUtility.NestedPropertyPaths.Remove(nestedThemePath);
-					}
-				}
-			} else {
-				// Keine Referenz, zeichne einfach das Standard-Property-Feld
-				Rect objectFieldRect = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
-				EditorGUI.PropertyField(objectFieldRect, property, label);
-			}
-
+			EditorGUI.PropertyField(position, property, label);
 			EditorGUI.EndProperty();
 		}
 
 		public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
-			string propPath = property.propertyPath;
-
-			// Basishöhe ist immer die Höhe der ersten Zeile
-			float height = EditorGUIUtility.singleLineHeight;
-
-			// Wenn ausgeklappt und eine Referenz vorhanden ist, füge Höhe für ColorTheme hinzu
-			if (property.objectReferenceValue != null &&
-				foldoutStates.ContainsKey(propPath) &&
-				foldoutStates[propPath]) {
-
-				ColorThemeAsset themeAsset = (ColorThemeAsset)property.objectReferenceValue;
-				SerializedObject serializedThemeObj = new SerializedObject(themeAsset);
-				SerializedProperty themeProp = serializedThemeObj.FindProperty("theme");
-
-				// Hole den vollständigen Pfad für die verschachtelte Theme-Property
-				string nestedThemePath = themeProp.propertyPath;
-
-				try {
-					// Markiere vorübergehend als verschachtelt, um die korrekte Höhe zu erhalten
-					ColorThemeUtility.NestedPropertyPaths.Add(nestedThemePath);
-					height += EditorGUI.GetPropertyHeight(themeProp) + 2;
-				} finally {
-					// Immer aufräumen
-					ColorThemeUtility.NestedPropertyPaths.Remove(nestedThemePath);
-				}
-			}
-
-			return height;
+			return EditorGUIUtility.singleLineHeight;
 		}
 	}
 }

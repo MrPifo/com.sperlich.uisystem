@@ -1,6 +1,7 @@
+using System;
 using System.Collections.Generic;
+using Sperlich.Event;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
 namespace Sperlich.UISystem {
@@ -11,10 +12,10 @@ namespace Sperlich.UISystem {
 		private bool isSelected;
 		[SerializeField]
 		private bool enableLoop = false;
-		public UnityEvent<EventData> onSelect;
-		public UnityEvent<EventData> onDeselect;
-		public UnityEvent<EventData> onSubmit;
-		public UnityEvent<EventData> onCancel;
+		public SEvent<EventData> onSelect = new();
+		public SEvent<EventData> onDeselect = new();
+		public SEvent<EventData> onSubmit = new();
+		public SEvent<EventData> onCancel = new();
 
 		[HideInInspector]
 		[SerializeField]
@@ -187,7 +188,7 @@ namespace Sperlich.UISystem {
 			uiElement.OnCancel(evt);
 		}
 
-		private UnityEvent<EventData> GetEvent(EventSignal type) {
+		private SEvent<EventData> GetEvent(EventSignal type) {
 			switch (type) {
 				case EventSignal.Select:
 					return onSelect;
@@ -201,7 +202,7 @@ namespace Sperlich.UISystem {
 
 			return null;
 		}
-		public void Subscribe(EventSignal type, UnityAction<EventData> action) {
+		public void Subscribe(EventSignal type, Action<EventData> action) {
 			var @event = GetEvent(type);
 			@event.AddListener(action);
 
@@ -212,7 +213,9 @@ namespace Sperlich.UISystem {
 				_internalCancelEventCounter++;
 			}
 		}
-		public void Unsubscribe(EventSignal type, UnityAction<EventData> action) {
+		public void Subscribe(EventSignal type, UnityEngine.Events.UnityAction<EventData> action) => Subscribe(type, new Action<EventData>(action));
+
+		public void Unsubscribe(EventSignal type, Action<EventData> action) {
 			var @event = GetEvent(type);
 			@event.RemoveListener(action);
 
@@ -223,6 +226,7 @@ namespace Sperlich.UISystem {
 				_internalCancelEventCounter--;
 			}
 		}
+		public void Unsubscribe(EventSignal type, UnityEngine.Events.UnityAction<EventData> action) => Unsubscribe(type, new Action<EventData>(action));
 
 		public void SetSelectable(NavDir dir, UIBase uiBase) => SetSelectable(dir, uiBase != null ? uiBase.Navigator : null);
 		public new void SetSelectable(NavDir dir, Navigator selectable) => base.SetSelectable(dir, selectable);

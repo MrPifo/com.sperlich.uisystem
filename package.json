@@ -19,6 +19,7 @@
         "uisystem"
     ],
     "dependencies": {
+        "com.sperlich.event": "1.0.0",
         "com.sperlich.layout": "1.0.0",
         "com.sperlich.text": "1.0.0"
     }

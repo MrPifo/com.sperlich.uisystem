@@ -1,12 +1,15 @@
 using Sperlich.EditorKit;
 using Sperlich.Text;
 using Sperlich.UISystem.Themes;
+using Sperlich.UISystem.Themes.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	[CustomEditor(typeof(Button))]
 	[CanEditMultipleObjects]
 	public class ButtonEditor : UnityEditor.Editor {
@@ -141,14 +144,16 @@ namespace Sperlich.UISystem.Editor {
 
 			colorsHeader.AddManipulator(new ContextualMenuManipulator(evt => {
 				evt.menu.AppendAction("Copy Colors", _ => {
-					clipboardBtnTheme = btnThemeProp.objectReferenceValue as ColorThemeAsset;
-					clipboardTextColors = textColorsProp.objectReferenceValue as ColorThemeAsset;
+					clipboardBtnTheme = btnThemeProp.FindPropertyRelative("asset").objectReferenceValue as ColorThemeAsset;
+					clipboardTextColors = textColorsProp.FindPropertyRelative("asset").objectReferenceValue as ColorThemeAsset;
 				});
 				evt.menu.AppendAction("Paste Colors", _ => {
-					btnThemeProp.objectReferenceValue = clipboardBtnTheme;
-					textColorsProp.objectReferenceValue = clipboardTextColors;
+					btnThemeProp.FindPropertyRelative("asset").objectReferenceValue = clipboardBtnTheme;
+					btnThemeProp.FindPropertyRelative("source").enumValueIndex = (int)ColorThemeRef.Source.Asset;
+					textColorsProp.FindPropertyRelative("asset").objectReferenceValue = clipboardTextColors;
+					textColorsProp.FindPropertyRelative("source").enumValueIndex = (int)ColorThemeRef.Source.Asset;
 					serializedObject.ApplyModifiedProperties();
-					ApplyNormalColorPreview(btnThemeProp);
+					ApplyNormalColorPreview();
 				}, HasClipboardColors ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 			}));
 
@@ -157,13 +162,10 @@ namespace Sperlich.UISystem.Editor {
 			colorsWrap.Add(colorsBody);
 			root.Add(colorsWrap);
 
-			VisualElement btnThemeDropdown = SperlichEditorWidgets.CreateAssetDropdown<ColorThemeAsset>(btnThemeProp, Accent);
-			VisualElement textColorsDropdown = SperlichEditorWidgets.CreateAssetDropdown<ColorThemeAsset>(textColorsProp, Accent);
+			colorsBody.Add(new PropertyField(btnThemeProp, "Button Theme"));
+			colorsBody.Add(new PropertyField(textColorsProp, "Text Colors"));
 
-			colorsBody.Add(col.Row("Button Theme", btnThemeDropdown));
-			colorsBody.Add(col.Row("Text Colors", textColorsDropdown));
-
-			void ApplyNormalColorPreview(SerializedProperty prop) {
+			void ApplyNormalColorPreview() {
 				foreach (var obj in serializedObject.targetObjects) {
 					if (obj is not Button button) {
 						continue;
@@ -187,8 +189,13 @@ namespace Sperlich.UISystem.Editor {
 					}
 				}
 			}
-			root.TrackPropertyValue(btnThemeProp, ApplyNormalColorPreview);
-			root.TrackPropertyValue(textColorsProp, ApplyNormalColorPreview);
+			// Covers source/asset swaps (own serialized data) and edits to a Custom theme's colors.
+			root.TrackSerializedObjectValue(serializedObject, _ => ApplyNormalColorPreview());
+			// Covers edits to a referenced ColorThemeAsset's colors, which live on a separate SerializedObject
+			// and wouldn't otherwise notify this inspector.
+			ColorThemeUtility.AnyColorChanged -= ApplyNormalColorPreview;
+			ColorThemeUtility.AnyColorChanged += ApplyNormalColorPreview;
+			root.RegisterCallback<DetachFromPanelEvent>(_ => ColorThemeUtility.AnyColorChanged -= ApplyNormalColorPreview);
 
 			// ---- Events -------------------------------------------------------------------------
 			var eventsSec = Section(root, "EVENTS", true);
@@ -212,5 +219,6 @@ namespace Sperlich.UISystem.Editor {
 			parent.Add(wrap);
 			return body;
 		}
+
 	}
 }

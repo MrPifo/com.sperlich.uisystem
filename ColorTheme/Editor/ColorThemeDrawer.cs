@@ -1,59 +1,102 @@
+using Sperlich.EditorKit;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Themes.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	[CustomPropertyDrawer(typeof(ColorTheme))]
 	public class ColorThemeDrawer : PropertyDrawer {
 
-		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-			EditorGUI.BeginProperty(position, label, property);
+		public override VisualElement CreatePropertyGUI(SerializedProperty property) {
+			var container = new VisualElement {
+				style = {
+					marginTop = 2,
+					marginBottom = 2
+				}
+			};
 
-			// Prüfe, ob wir in einem ColorThemeAsset verschachtelt sind
 			bool isNested = ColorThemeUtility.NestedPropertyPaths.Contains(property.propertyPath);
+			if (isNested) {
+				// Direkt das Grid ohne zusÃ¤tzliches Foldout rendern
+				container.Add(ColorThemeUtility.CreateColorGrid(property));
+				return container;
+			}
 
-			// Erste Zeile Position
+			// Standalone ColorTheme mit ChevronSection
+			string label = property.displayName;
+			var (header, body, _) = SperlichEditorWidgets.CreateChevronSection(label, property.isExpanded, SperlichEditorTheme.BgStep, null, property.propertyPath);
+			body.style.paddingLeft = 6;
+			body.style.paddingRight = 6;
+			body.style.paddingTop = 4;
+			body.style.paddingBottom = 6;
+
+			// Context Menu (Copy/Paste)
+			header.AddManipulator(new ContextualMenuManipulator(evt => {
+				evt.menu.AppendAction("Copy Colors", _ => {
+					ColorThemeUtility.Clipboard = ColorThemeUtility.ReadColors(property);
+					ColorThemeUtility.HasClipboard = true;
+				});
+				evt.menu.AppendAction("Paste Colors", _ => {
+					ColorThemeUtility.WriteColors(property, ColorThemeUtility.Clipboard);
+					if (property.serializedObject.targetObject != null) {
+						EditorUtility.SetDirty(property.serializedObject.targetObject);
+					}
+				}, ColorThemeUtility.HasClipboard ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+			}));
+
+			// Reset Button
+			var actionsRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					justifyContent = Justify.FlexEnd,
+					marginBottom = 4
+				}
+			};
+			var resetBtn = SperlichEditorWidgets.MakeButton("Reset", 60, () => {
+				ColorThemeUtility.ResetToDefaults(property);
+				if (property.serializedObject.targetObject != null) {
+					EditorUtility.SetDirty(property.serializedObject.targetObject);
+				}
+			});
+			actionsRow.Add(resetBtn);
+			body.Add(actionsRow);
+
+			body.Add(ColorThemeUtility.CreateColorGrid(property));
+
+			var wrap = new VisualElement { style = { marginBottom = 2 } };
+			wrap.Add(header);
+			wrap.Add(body);
+			container.Add(wrap);
+
+			return container;
+		}
+
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
+			// Fallback fr IMGUI Umgebungen
+			EditorGUI.BeginProperty(position, label, property);
+			bool isNested = ColorThemeUtility.NestedPropertyPaths.Contains(property.propertyPath);
 			float yPos = position.y;
 
 			if (!isNested) {
-				// Berechne Rects für das Foldout und den Reset-Button
-				Rect foldoutRect;
-				float buttonWidth = 80f;
-				float spacing = 5f;
+				Rect foldoutRect = new(position.x, yPos, position.width - 65f, EditorGUIUtility.singleLineHeight);
+				Rect buttonRect = new(position.x + position.width - 60f, yPos, 60f, EditorGUIUtility.singleLineHeight);
 
-				if (property.isExpanded) {
-					// Wenn ausgeklappt, mache Platz für den Reset-Button
-					foldoutRect = new Rect(position.x, yPos, position.width - buttonWidth - spacing, EditorGUIUtility.singleLineHeight);
-
-					// Erstelle das Button-Rect auf der gleichen Zeile, rechts ausgerichtet
-					Rect buttonRect = new Rect(position.x + position.width - buttonWidth, yPos, buttonWidth, EditorGUIUtility.singleLineHeight);
-
-					// Zeichne den Reset-Button
-					if (GUI.Button(buttonRect, "Reset")) {
-						ColorThemeUtility.ResetToDefaults(property);
-					}
-				} else {
-					// Wenn nicht ausgeklappt, nutze die volle Breite
-					foldoutRect = new Rect(position.x, yPos, position.width, EditorGUIUtility.singleLineHeight);
+				if (GUI.Button(buttonRect, "Reset")) {
+					ColorThemeUtility.ResetToDefaults(property);
 				}
 
-				// Zeichne das Foldout
 				property.isExpanded = EditorGUI.Foldout(foldoutRect, property.isExpanded, label, true);
-
-				// Springe zur nächsten Zeile, wenn ausgeklappt
 				if (property.isExpanded) {
 					yPos += EditorGUIUtility.singleLineHeight + 2;
 				}
 			}
 
-			// Zeichne Farbfelder, wenn ausgeklappt oder verschachtelt
 			if (isNested || property.isExpanded) {
-				// Einrückungsebene
 				EditorGUI.indentLevel++;
 				float indent = EditorGUI.indentLevel * 15f;
-
-				// Zeichne alle Farbfelder
 				ColorThemeUtility.DrawColorFields(position, property, yPos, indent);
-
 				EditorGUI.indentLevel--;
 			}
 
@@ -62,18 +105,15 @@ namespace Sperlich.UISystem.Themes.Editor {
 
 		public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
 			bool isNested = ColorThemeUtility.NestedPropertyPaths.Contains(property.propertyPath);
-
 			if (isNested) {
-				// Wenn verschachtelt, zeige immer die Farben (3 Zeilen)
 				return ColorThemeUtility.GetColorFieldsHeight();
-			} else {
-				// Normales eigenständiges Verhalten mit Foldout
-				if (!property.isExpanded)
-					return EditorGUIUtility.singleLineHeight;
-
-				// Foldout + 3 Farbzeilen
-				return EditorGUIUtility.singleLineHeight + 2 + ColorThemeUtility.GetColorFieldsHeight();
 			}
+
+			if (!property.isExpanded) {
+				return EditorGUIUtility.singleLineHeight;
+			}
+
+			return EditorGUIUtility.singleLineHeight + 2 + ColorThemeUtility.GetColorFieldsHeight();
 		}
 	}
 }

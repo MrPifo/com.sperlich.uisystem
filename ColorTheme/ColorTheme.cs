@@ -30,6 +30,35 @@ namespace Sperlich.UISystem.Themes {
 			}
 		}
 
+		public void SetColor(ComponentState state, Color color) {
+			switch (state) {
+				default:
+				case ComponentState.Normal:
+					normalColor = color;
+					break;
+				case ComponentState.Hovered:
+					hoveredColor = color;
+					break;
+				case ComponentState.Pressed:
+					pressedColor = color;
+					break;
+				case ComponentState.Selected:
+					selectedColor = color;
+					break;
+				case ComponentState.Disabled:
+					disabledColor = color;
+					break;
+				case ComponentState.ReadOnly:
+					readOnlyColor = color;
+					break;
+			}
+		}
+
+		public Color this[ComponentState state] {
+			get => GetColor(state);
+			set => SetColor(state, value);
+		}
+
 		public ColorTheme() { }
 
 		// Constructor for backward compatibility

@@ -1,7 +1,7 @@
+using Sperlich.Event;
 using Sperlich.Text;
 using Sperlich.UISystem.Themes;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Sperlich.UISystem {
@@ -9,12 +9,12 @@ namespace Sperlich.UISystem {
 	public class Button : UIBase {
 
 		[SerializeField]
-		private UnityEvent onClickEvent;
+		private SEvent onClickEvent = new();
 
 		[SerializeField]
-		protected ColorThemeAsset btnTheme;
+		protected ColorThemeRef btnTheme = new();
 		[SerializeField]
-		protected ColorThemeAsset textColors;
+		protected ColorThemeRef textColors = new();
 
 		[SerializeField]
 		private Image btnImage;
@@ -28,9 +28,9 @@ namespace Sperlich.UISystem {
 		public Material ImgMaterial => HasBG ? btnImage.material : null;
 		public SText Text => text;
 		public Image Image => btnImage;
-		public UnityEvent OnClickEvent => onClickEvent;
-		public ColorThemeAsset BtnTheme => btnTheme;
-		public ColorThemeAsset TextColors => textColors;
+		public SEvent OnClickEvent => onClickEvent;
+		public ColorThemeRef BtnTheme => btnTheme;
+		public ColorThemeRef TextColors => textColors;
 
 		protected override void OnAwake() {
 			AddEvent(EventSignal.Click, OnClick);
@@ -94,7 +94,7 @@ namespace Sperlich.UISystem {
 
 		#region Component Helpers
 		public bool TrySetButtonColor(ComponentState state) {
-			if(btnTheme != null) {
+			if(btnTheme != null && btnTheme.HasTheme) {
 				return TrySetButtonColor(btnTheme.GetColor(state));
 			}
 
@@ -110,7 +110,7 @@ namespace Sperlich.UISystem {
 			return false;
 		}
 		public bool TrySetTextColor(ComponentState state) {
-			if (textColors != null) {
+			if (textColors != null && textColors.HasTheme) {
 				return TrySetTextColor(textColors.GetColor(state));
 			}
 
