@@ -51,7 +51,7 @@ namespace Sperlich.UISystem.Editor {
 					width = 8,
 					height = 8,
 					marginRight = 6,
-					backgroundColor = isSelectedProp.boolValue ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted
+					backgroundColor = isSelectedProp.boolValue ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted
 				}
 			};
 			SperlichEditorWidgets.SetRadius(statusDot, 4);
@@ -70,16 +70,16 @@ namespace Sperlich.UISystem.Editor {
 			var stateBadge = SperlichEditorWidgets.CreateBadge(
 				isSelectedProp.boolValue ? "SELECTED" : "IDLE",
 				isSelectedProp.boolValue ? new Color(0.18f, 0.55f, 0.34f, 0.35f) : new Color(1f, 1f, 1f, 0.06f),
-				isSelectedProp.boolValue ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted
+				isSelectedProp.boolValue ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted
 			);
 			statusRow.Add(stateBadge);
 
 			root.TrackPropertyValue(isSelectedProp, prop => {
 				bool sel = prop.boolValue;
-				statusDot.style.backgroundColor = sel ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted;
+				statusDot.style.backgroundColor = sel ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted;
 				stateBadge.text = sel ? "SELECTED" : "IDLE";
 				stateBadge.style.backgroundColor = sel ? new Color(0.18f, 0.55f, 0.34f, 0.35f) : new Color(1f, 1f, 1f, 0.06f);
-				stateBadge.style.color = sel ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted;
+				stateBadge.style.color = sel ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted;
 			});
 			root.Add(statusRow);
 
