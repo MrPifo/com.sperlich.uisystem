@@ -1,26 +1,27 @@
+using Sperlich.EditorKit;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
-	using FlexDirection = UnityEngine.UIElements.FlexDirection;
 
 	[CustomEditor(typeof(Navigator), true)]
 	[CanEditMultipleObjects]
 	public class NavigatorEditor : UnityEditor.Editor {
 
+		private static readonly Color Accent = SperlichEditorTheme.ButtonAccent;
+
 		public override VisualElement CreateInspectorGUI() {
 			var root = new VisualElement();
+			var col = new SperlichFieldColumn(110f);
 
 			SerializedProperty interactableProp = serializedObject.FindProperty("_interactable");
-
 			SerializedProperty selectOnUpProp = serializedObject.FindProperty("selectOnUp");
 			SerializedProperty selectOnDownProp = serializedObject.FindProperty("selectOnDown");
 			SerializedProperty selectOnLeftProp = serializedObject.FindProperty("selectOnLeft");
 			SerializedProperty selectOnRightProp = serializedObject.FindProperty("selectOnRight");
 			SerializedProperty enableLoopProp = serializedObject.FindProperty("enableLoop");
-
 			SerializedProperty isSelectedProp = serializedObject.FindProperty("isSelected");
 
 			SerializedProperty onSelectProp = serializedObject.FindProperty("onSelect");
@@ -28,43 +29,116 @@ namespace Sperlich.UISystem.Editor {
 			SerializedProperty onSubmitProp = serializedObject.FindProperty("onSubmit");
 			SerializedProperty onCancelProp = serializedObject.FindProperty("onCancel");
 
-			VisualElement selectedRow = SperlichUIEditorStyle.CreateStateRow("Is Selected", out VisualElement selectedDot, isSelectedProp.boolValue);
-			root.Add(selectedRow);
-			root.TrackPropertyValue(isSelectedProp, prop => SperlichUIEditorStyle.SetDotState(selectedDot, prop.boolValue));
+			// ---- Status Row ---------------------------------------------------------------------
+			var statusRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center,
+					justifyContent = Justify.SpaceBetween,
+					paddingLeft = 8,
+					paddingRight = 8,
+					paddingTop = 5,
+					paddingBottom = 5,
+					marginBottom = 4,
+					backgroundColor = SperlichEditorTheme.BgStep
+				}
+			};
+			SperlichEditorWidgets.SetRadius(statusRow, 4);
 
-			root.Add(SperlichUIEditorStyle.CreateSectionHeader("Core"));
-			root.Add(new PropertyField(interactableProp, "Interactable"));
+			var statusLabelWrap = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+			var statusDot = new VisualElement {
+				style = {
+					width = 8,
+					height = 8,
+					marginRight = 6,
+					backgroundColor = isSelectedProp.boolValue ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted
+				}
+			};
+			SperlichEditorWidgets.SetRadius(statusDot, 4);
+			statusLabelWrap.Add(statusDot);
 
-			Foldout navigationFoldout = SperlichUIEditorStyle.CreateFoldoutSection("Navigator.Navigation", "Navigation");
-			root.Add(navigationFoldout);
-			navigationFoldout.Add(new PropertyField(enableLoopProp, "Enable Loop"));
+			var titleLabel = new Label("Selection State") {
+				style = {
+					fontSize = 11,
+					unityFontStyleAndWeight = FontStyle.Bold,
+					color = SperlichEditorTheme.TextSecondary
+				}
+			};
+			statusLabelWrap.Add(titleLabel);
+			statusRow.Add(statusLabelWrap);
 
-			VisualElement crossLayout = CreateDirectionalCross(selectOnUpProp, selectOnDownProp, selectOnLeftProp, selectOnRightProp);
-			navigationFoldout.Add(crossLayout);
+			var stateBadge = SperlichEditorWidgets.CreateBadge(
+				isSelectedProp.boolValue ? "SELECTED" : "IDLE",
+				isSelectedProp.boolValue ? new Color(0.18f, 0.55f, 0.34f, 0.35f) : new Color(1f, 1f, 1f, 0.06f),
+				isSelectedProp.boolValue ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted
+			);
+			statusRow.Add(stateBadge);
 
-			Foldout eventsFoldout = SperlichUIEditorStyle.CreateFoldoutSection("Navigator.Events", "Events");
-			root.Add(eventsFoldout);
-			eventsFoldout.Add(new PropertyField(onSelectProp));
-			eventsFoldout.Add(new PropertyField(onDeselectProp));
-			eventsFoldout.Add(new PropertyField(onSubmitProp));
-			eventsFoldout.Add(new PropertyField(onCancelProp));
+			root.TrackPropertyValue(isSelectedProp, prop => {
+				bool sel = prop.boolValue;
+				statusDot.style.backgroundColor = sel ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted;
+				stateBadge.text = sel ? "SELECTED" : "IDLE";
+				stateBadge.style.backgroundColor = sel ? new Color(0.18f, 0.55f, 0.34f, 0.35f) : new Color(1f, 1f, 1f, 0.06f);
+				stateBadge.style.color = sel ? SperlichEditorTheme.ActiveGreen : SperlichEditorTheme.TextMuted;
+			});
+			root.Add(statusRow);
+
+			// ---- Core ---------------------------------------------------------------------------
+			var coreSec = Section(root, "CORE", true);
+			coreSec.Add(col.Property(interactableProp, "Interactable"));
+			coreSec.Add(col.Property(enableLoopProp, "Enable Loop"));
+
+			// ---- Navigation ---------------------------------------------------------------------
+			var navSec = Section(root, "NAVIGATION", true);
+			VisualElement crossBox = SperlichEditorWidgets.CreateBox(4, SperlichEditorTheme.BorderSubtle);
+			crossBox.style.backgroundColor = SperlichEditorTheme.BgDark;
+			crossBox.style.paddingTop = 6;
+			crossBox.style.paddingBottom = 6;
+			crossBox.style.paddingLeft = 4;
+			crossBox.style.paddingRight = 4;
+			crossBox.style.marginTop = 2;
+			crossBox.style.marginBottom = 2;
+			crossBox.Add(CreateDirectionalCross(selectOnUpProp, selectOnDownProp, selectOnLeftProp, selectOnRightProp));
+			navSec.Add(crossBox);
+
+			// ---- Events -------------------------------------------------------------------------
+			var eventsSec = Section(root, "EVENTS", false);
+			eventsSec.Add(new PropertyField(onSelectProp));
+			eventsSec.Add(new PropertyField(onDeselectProp));
+			eventsSec.Add(new PropertyField(onSubmitProp));
+			eventsSec.Add(new PropertyField(onCancelProp));
+
+			// preserve scroll
+			SperlichInspectorScroll.Preserve(root, target);
 
 			return root;
 		}
 
+		private static VisualElement Section(VisualElement parent, string title, bool expanded) {
+			var (header, body, _) = SperlichEditorWidgets.CreateChevronSection(title, expanded, SperlichEditorTheme.BgStep, null, nameof(NavigatorEditor));
+			body.style.paddingLeft = 6;
+			body.style.paddingRight = 6;
+			body.style.paddingTop = 4;
+			body.style.paddingBottom = 6;
+			var wrap = new VisualElement { style = { marginBottom = 4 } };
+			wrap.Add(header);
+			wrap.Add(body);
+			parent.Add(wrap);
+			return body;
+		}
+
 		private VisualElement CreateDirectionalCross(SerializedProperty up, SerializedProperty down, SerializedProperty left, SerializedProperty right) {
-			const float fieldWidth = 130f;
+			const float fieldWidth = 110f;
 
 			var container = new VisualElement();
-			container.style.marginTop = 4;
 
 			var upRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center } };
 			upRow.Add(CreateDirectionField("Up", up, fieldWidth));
 			container.Add(upRow);
 
-			var midRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center } };
+			var midRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, marginTop = 2, marginBottom = 2 } };
 			midRow.Add(CreateDirectionField("Left", left, fieldWidth));
-			midRow.Add(new VisualElement { style = { width = fieldWidth } });
+			midRow.Add(new VisualElement { style = { width = 16 } });
 			midRow.Add(CreateDirectionField("Right", right, fieldWidth));
 			container.Add(midRow);
 
@@ -78,10 +152,15 @@ namespace Sperlich.UISystem.Editor {
 		private VisualElement CreateDirectionField(string label, SerializedProperty prop, float width) {
 			var column = new VisualElement { style = { width = width, marginLeft = 2, marginRight = 2 } };
 
-			var lbl = new Label(label);
-			lbl.style.unityTextAlign = TextAnchor.MiddleCenter;
-			lbl.style.fontSize = 10;
-			lbl.style.color = SperlichUIEditorStyle.HeaderTextColor;
+			var lbl = new Label(label) {
+				style = {
+					unityTextAlign = TextAnchor.MiddleCenter,
+					fontSize = 10,
+					unityFontStyleAndWeight = FontStyle.Bold,
+					color = SperlichEditorTheme.TextMuted,
+					marginBottom = 1
+				}
+			};
 			column.Add(lbl);
 
 			var field = new ObjectField { objectType = typeof(Navigator), label = string.Empty };

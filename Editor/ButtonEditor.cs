@@ -38,6 +38,29 @@ namespace Sperlich.UISystem.Editor {
 
 			// ---- State --------------------------------------------------------------------------
 			var stateSec = Section(root, "STATE", true);
+
+			var targetButton = target as Button;
+			bool initialInteractable = targetButton != null && targetButton.IsInteractable;
+			var interactableToggle = new PillToggle(initialInteractable, Accent);
+			interactableToggle.Clicked += () => {
+				bool nextState = false;
+				if (target is Button b) {
+					nextState = !b.IsInteractable;
+				}
+				foreach (var obj in serializedObject.targetObjects) {
+					if (obj is Button btn) {
+						Undo.RecordObject(btn, "Toggle Button Interactable");
+						btn.IsInteractable = nextState;
+						btn.TrySetButtonColor(btn.State);
+						btn.TrySetTextColor(btn.State);
+						EditorUtility.SetDirty(btn);
+					}
+				}
+				interactableToggle.SetValue(nextState);
+				serializedObject.Update();
+			};
+			stateSec.Add(col.Row("Interactable", interactableToggle));
+
 			stateSec.Add(col.Row("Component State", SperlichEditorWidgets.CreateEnumDropdown(stateProp, Accent, _ => {
 				foreach (var obj in serializedObject.targetObjects) {
 					if (obj is Button btn) {
