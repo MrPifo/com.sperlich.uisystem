@@ -128,48 +128,133 @@ namespace Sperlich.UISystem.Editor {
 		}
 
 		private VisualElement CreateDirectionalCross(SerializedProperty up, SerializedProperty down, SerializedProperty left, SerializedProperty right) {
-			const float fieldWidth = 110f;
+			const float fieldWidth = 120f;
 
-			var container = new VisualElement();
+			var container = new VisualElement {
+				style = {
+					alignItems = Align.Center
+				}
+			};
 
-			var upRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center } };
-			upRow.Add(CreateDirectionField("Up", up, fieldWidth));
+			// Up row
+			var upRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					justifyContent = Justify.Center,
+					marginBottom = 3
+				}
+			};
+			upRow.Add(CreateDirectionField("▲", up, fieldWidth, false));
 			container.Add(upRow);
 
-			var midRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, marginTop = 2, marginBottom = 2 } };
-			midRow.Add(CreateDirectionField("Left", left, fieldWidth));
-			midRow.Add(new VisualElement { style = { width = 16 } });
-			midRow.Add(CreateDirectionField("Right", right, fieldWidth));
+			// Middle row (Left, Hub, Right)
+			var midRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center,
+					justifyContent = Justify.Center,
+					marginBottom = 3
+				}
+			};
+			midRow.Add(CreateDirectionField("◄", left, fieldWidth, false));
+
+			var hub = new VisualElement {
+				style = {
+					width = 20,
+					height = 20,
+					marginLeft = 4,
+					marginRight = 4,
+					backgroundColor = SperlichEditorTheme.BgStep,
+					borderTopWidth = 1,
+					borderBottomWidth = 1,
+					borderLeftWidth = 1,
+					borderRightWidth = 1,
+					alignItems = Align.Center,
+					justifyContent = Justify.Center
+				}
+			};
+			SperlichEditorWidgets.SetBorderColor(hub, SperlichEditorTheme.BorderSubtle);
+			SperlichEditorWidgets.SetRadius(hub, 10);
+			var hubLabel = new Label("⦿") {
+				style = {
+					fontSize = 9,
+					color = SperlichEditorTheme.TextMuted,
+					unityTextAlign = TextAnchor.MiddleCenter
+				}
+			};
+			hub.Add(hubLabel);
+			midRow.Add(hub);
+
+			midRow.Add(CreateDirectionField("►", right, fieldWidth, true));
 			container.Add(midRow);
 
-			var downRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center } };
-			downRow.Add(CreateDirectionField("Down", down, fieldWidth));
+			// Down row
+			var downRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					justifyContent = Justify.Center
+				}
+			};
+			downRow.Add(CreateDirectionField("▼", down, fieldWidth, false));
 			container.Add(downRow);
 
 			return container;
 		}
 
-		private VisualElement CreateDirectionField(string label, SerializedProperty prop, float width) {
-			var column = new VisualElement { style = { width = width, marginLeft = 2, marginRight = 2 } };
-
-			var lbl = new Label(label) {
+		private VisualElement CreateDirectionField(string arrow, SerializedProperty prop, float width, bool badgeAtEnd) {
+			var row = new VisualElement {
 				style = {
-					unityTextAlign = TextAnchor.MiddleCenter,
-					fontSize = 10,
-					unityFontStyleAndWeight = FontStyle.Bold,
-					color = SperlichEditorTheme.TextMuted,
-					marginBottom = 1
+					width = width,
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center
 				}
 			};
-			column.Add(lbl);
+
+			var badge = new VisualElement {
+				style = {
+					width = 18,
+					height = 18,
+					backgroundColor = SperlichEditorTheme.BgStep,
+					alignItems = Align.Center,
+					justifyContent = Justify.Center,
+					borderTopWidth = 1,
+					borderBottomWidth = 1,
+					borderLeftWidth = 1,
+					borderRightWidth = 1,
+					flexShrink = 0
+				}
+			};
+			SperlichEditorWidgets.SetBorderColor(badge, SperlichEditorTheme.BorderSubtle);
+			SperlichEditorWidgets.SetRadius(badge, 3);
+
+			var arrowLabel = new Label(arrow) {
+				style = {
+					fontSize = 9,
+					unityFontStyleAndWeight = FontStyle.Bold,
+					color = Accent,
+					unityTextAlign = TextAnchor.MiddleCenter
+				}
+			};
+			badge.Add(arrowLabel);
 
 			var field = new ObjectField { objectType = typeof(Navigator), label = string.Empty };
 			field.BindProperty(prop);
 			field.labelElement.style.display = DisplayStyle.None;
+			field.style.flexGrow = 1;
 			field.style.marginLeft = 0;
-			column.Add(field);
+			field.style.marginRight = 0;
 
-			return column;
+			if (badgeAtEnd) {
+				badge.style.marginLeft = 3;
+				row.Add(field);
+				row.Add(badge);
+			} else {
+				badge.style.marginRight = 3;
+				row.Add(badge);
+				row.Add(field);
+			}
+
+			return row;
 		}
 	}
 }
