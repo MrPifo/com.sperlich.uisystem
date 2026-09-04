@@ -1,27 +1,27 @@
 {
-    "name":  "com.sperlich.uisystem",
-    "version":  "1.0.0",
-    "displayName":  "Sperlich UI System",
-    "description":  "Custom UI System and Interaction Framework.",
-    "unity":  "6000.0",
-    "author":  {
-                   "name":  "Lion Sperlich",
-                   "url":  "https://github.com/MrPifo"
-               },
-    "license":  "MIT",
-    "repository":  {
-                       "type":  "git",
-                       "url":  "https://github.com/MrPifo/com.sperlich.uisystem.git"
-                   },
-    "keywords":  [
-                     "Sperlich",
-                     "ui",
-                     "uisystem"
-                 ],
-    "dependencies":  {
-                         "com.sperlich.layout":  "https://github.com/MrPifo/com.sperlich.layout.git",
-                         "com.sperlich.text":  "https://github.com/MrPifo/com.sperlich.text.git",
-                         "com.sperlich.prefabmanager":  "https://github.com/MrPifo/com.sperlich.prefabmanager.git",
-                         "com.cysharp.unitask":  "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
-                     }
+    "name": "com.sperlich.uisystem",
+    "version": "1.0.0",
+    "displayName": "Sperlich UI System",
+    "description": "Custom UI System and Interaction Framework.",
+    "unity": "6000.0",
+    "author": {
+        "name": "Lion Sperlich",
+        "url": "https://github.com/MrPifo"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MrPifo/com.sperlich.uisystem.git"
+    },
+    "keywords": [
+        "Sperlich",
+        "ui",
+        "uisystem"
+    ],
+    "dependencies": {
+        "com.sperlich.layout": "1.0.0",
+        "com.sperlich.text": "1.0.0",
+        "com.sperlich.prefabmanager": "1.0.1",
+        "com.cysharp.unitask": "2.5.4"
+    }
 }
