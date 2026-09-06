@@ -60,7 +60,7 @@ namespace Sperlich.UISystem.Editor
             textRt.anchoredPosition = Vector2.zero;
 
             var sText = textGo.GetComponent<SText>();
-            var settings = SperlichTextSettings.GetOrDefault();
+            var settings = STextSettings.GetOrDefault();
             if (settings != null && settings.defaultFont != null)
             {
                 sText.Font = settings.defaultFont;
