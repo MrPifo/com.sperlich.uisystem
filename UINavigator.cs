@@ -74,14 +74,6 @@ namespace Sperlich.UISystem {
 			get {
 				if (_instance == null) {
 					_instance = FindFirstObjectByType<UINavigator>(FindObjectsInactive.Include);
-
-					if (_instance == null) {
-						GameObject go = new GameObject("[UINavigator]");
-						_instance = go.AddComponent<UINavigator>();
-						if (Application.isPlaying) {
-							DontDestroyOnLoad(go);
-						}
-					}
 				}
 
 				return _instance;
@@ -130,12 +122,19 @@ namespace Sperlich.UISystem {
 		#endregion
 
 		void Awake() {
-			if(Instance != null && Instance != this) {
-				Destroy(gameObject);
+			if(_instance != null && _instance != this) {
+				Debug.LogWarning($"A second UINavigator was found on '{gameObject.name}'. There must be exactly one UINavigator in the project. Removing the duplicate component.", gameObject);
+				Destroy(this);
 				return;
 			}
 
+			_instance = this;
 			FetchComponents();
+		}
+		void OnDestroy() {
+			if(_instance == this) {
+				_instance = null;
+			}
 		}
 		void Update() {
 			if(InputProvider == null) return;
