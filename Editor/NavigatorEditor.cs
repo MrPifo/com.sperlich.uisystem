@@ -100,14 +100,18 @@ namespace Sperlich.UISystem.Editor {
 			crossBox.style.marginTop = 2;
 			crossBox.style.marginBottom = 2;
 			crossBox.Add(CreateDirectionalCross(selectOnUpProp, selectOnDownProp, selectOnLeftProp, selectOnRightProp));
-			navSec.Add(crossBox);
+			// the box clips its content, so the override bar hangs off an outer wrapper
+			var crossWrap = new VisualElement();
+			crossWrap.Add(crossBox);
+			SperlichPrefabOverride.Attach(crossWrap, null, new[] { selectOnUpProp, selectOnDownProp, selectOnLeftProp, selectOnRightProp });
+			navSec.Add(crossWrap);
 
 			// ---- Events -------------------------------------------------------------------------
 			var eventsSec = Section(root, "EVENTS", true);
-			eventsSec.Add(new PropertyField(onSelectProp));
-			eventsSec.Add(new PropertyField(onDeselectProp));
-			eventsSec.Add(new PropertyField(onSubmitProp));
-			eventsSec.Add(new PropertyField(onCancelProp));
+			eventsSec.Add(SperlichFieldColumn.Raw(onSelectProp));
+			eventsSec.Add(SperlichFieldColumn.Raw(onDeselectProp));
+			eventsSec.Add(SperlichFieldColumn.Raw(onSubmitProp));
+			eventsSec.Add(SperlichFieldColumn.Raw(onCancelProp));
 
 			// preserve scroll
 			SperlichInspectorScroll.Preserve(root, target);

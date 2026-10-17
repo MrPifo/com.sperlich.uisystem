@@ -23,6 +23,8 @@ namespace Sperlich.UISystem {
 
 		private int _internalSubmitEventCounter;
 		private int _internalCancelEventCounter;
+		private int lastSubmitFrame = -1;
+		private int lastCancelFrame = -1;
 
 		public bool IsSelected => isSelected;
 		public bool EnableLoop {
@@ -56,6 +58,8 @@ namespace Sperlich.UISystem {
 		protected override void OnInteractableChanged(bool interactableNow) {
 			if (uiElement != null && uiElement.IsState(ComponentState.Disabled) != !interactableNow) {
 				uiElement.SetState(ComponentState.Disabled, !interactableNow);
+			} else if (uiElement != null) {
+				uiElement.RefreshVisualStateInternal();
 			}
 		}
 
@@ -76,6 +80,10 @@ namespace Sperlich.UISystem {
 
 			base.OnSelect(eventData);
 			isSelected = true;
+
+			if (uiElement != null) {
+				uiElement.SetState(ComponentState.Selected, true);
+			}
 
 			onSelect.Invoke(new EventData(EventSignal.Select, eventData, this));
 
@@ -168,6 +176,10 @@ namespace Sperlich.UISystem {
 			if (EventSystem.current == null || EventSystem.current.alreadySelecting || gameObject.activeSelf == false || UINavigator.IsNavigationActive == false) {
 				return;
 			}
+			if (lastSubmitFrame == Time.frameCount) {
+				return;
+			}
+			lastSubmitFrame = Time.frameCount;
 
 			var evt = new EventData(EventSignal.Submit, eventData, this);
 
@@ -181,6 +193,10 @@ namespace Sperlich.UISystem {
 			if (EventSystem.current == null || EventSystem.current.alreadySelecting || gameObject.activeSelf == false) {
 				return;
 			}
+			if (lastCancelFrame == Time.frameCount) {
+				return;
+			}
+			lastCancelFrame = Time.frameCount;
 
 			var evt = new EventData(EventSignal.Cancel, eventData, this);
 

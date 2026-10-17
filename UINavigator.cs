@@ -43,6 +43,7 @@ namespace Sperlich.UISystem {
 		private bool isInactive;
 
 		private bool firstUpdateCooldownPass;
+		private NavigationMode desiredMode;
 
 		public Navigator Selected {
 			get => activeSelection; internal set {
@@ -69,6 +70,10 @@ namespace Sperlich.UISystem {
 		public static bool IsNavigationActive => CooldownActive == false && IsEnabled && IsInactive == false;
 		private static UINavigator _instance;
 		public static IUIInputProvider InputProvider { get; set; }
+		/// <summary>
+		/// Raised after the navigation mode (Pointer/Directional) changed and the selection was updated.
+		/// </summary>
+		public static event Action<NavigationMode> NavigationModeChanged;
 		private static InputSystemResources _resources;
 		public static UINavigator Instance {
 			get {
@@ -129,6 +134,7 @@ namespace Sperlich.UISystem {
 			}
 
 			_instance = this;
+			desiredMode = navigationMode;
 			FetchComponents();
 		}
 		void OnDestroy() {
@@ -138,6 +144,9 @@ namespace Sperlich.UISystem {
 		}
 		void Update() {
 			if(InputProvider == null) return;
+
+			bool navActionPressed = DetectInputDevice();
+
 			if (CooldownActive && firstUpdateCooldownPass == false) {
 				navCooldown = Mathf.Clamp(navCooldown - Time.unscaledDeltaTime, 0f, float.MaxValue);
 
@@ -156,24 +165,12 @@ namespace Sperlich.UISystem {
 
 			if (IsInactive) return;
 
-			bool mouseMoved = Mathf.Abs(InputProvider.GetAxis(NavAction.MouseHorizontal)) > 0 || Mathf.Abs(InputProvider.GetAxis(NavAction.MouseVertical)) > 0;
-			bool navActionPressed = Mathf.Abs(InputProvider.GetAxis(NavAction.NavigateHorizontal)) > 0 || Mathf.Abs(InputProvider.GetAxis(NavAction.NavigateVertical)) > 0;
-			bool mouseBtnClicked = InputProvider.GetButtonDown(NavAction.MouseLM);
-
-			if(navigationMode == NavigationMode.Pointer && Cursor.visible == false && (mouseBtnClicked || mouseMoved)) {
-				ShowCursor();
-			} else if(navigationMode == NavigationMode.Directional && Cursor.visible == true && navActionPressed) {
-				HideCursor();
-			}
-
-			if (navActionPressed) {
-				if (navigationMode != NavigationMode.Directional) {
-					SetDigitalNavMode();
-				} else {
-					FallbackCheckFirstElement();
-				}
-			} else if (mouseMoved && navigationMode != NavigationMode.Pointer) {
+			if (desiredMode == NavigationMode.Directional && navigationMode != NavigationMode.Directional) {
+				SetDigitalNavMode();
+			} else if (desiredMode == NavigationMode.Pointer && navigationMode != NavigationMode.Pointer) {
 				SetAnalogMode();
+			} else if (navActionPressed) {
+				FallbackCheckFirstElement();
 			}
 
 			if (InputProvider.GetButtonDown(NavAction.Submit)) {
@@ -181,6 +178,40 @@ namespace Sperlich.UISystem {
 			} else if (InputProvider.GetButtonDown(NavAction.Cancel)) {
 				ProcessCancelAction();
 			}
+		}
+		/// <summary>
+		/// Remembers the last used input device (mouse or stick/keys) and syncs the cursor visibility immediately, even during a cooldown. Returns true if a navigation axis is pressed.
+		/// </summary>
+		bool DetectInputDevice() {
+			bool mouseMoved = IsAxisActive(NavAction.MouseHorizontal, NavAction.MouseVertical);
+			bool navActionPressed = IsAxisActive(NavAction.NavigateHorizontal, NavAction.NavigateVertical);
+
+			if (IsInactive) {
+				return navActionPressed;
+			}
+
+			if (navActionPressed) {
+				desiredMode = NavigationMode.Directional;
+			} else if (mouseMoved) {
+				desiredMode = NavigationMode.Pointer;
+			}
+
+			bool cursorShouldBeVisible = desiredMode == NavigationMode.Pointer;
+			if (Cursor.visible != cursorShouldBeVisible) {
+				if (cursorShouldBeVisible) {
+					ShowCursor();
+				} else {
+					HideCursor();
+				}
+			}
+
+			return navActionPressed;
+		}
+		bool IsAxisActive(NavAction horizontal, NavAction vertical) {
+			float x = InputProvider.GetAxis(horizontal);
+			float y = InputProvider.GetAxis(vertical);
+
+			return Mathf.Abs(x) > 0 || Mathf.Abs(y) > 0;
 		}
 		void ProcessSubmitAction() {
 			if (IsNavigationActive == false) return;
@@ -232,6 +263,7 @@ namespace Sperlich.UISystem {
 			if(Instance == null) return;
 			HideCursor();
 			Instance.navigationMode = NavigationMode.Directional;
+			Instance.desiredMode = NavigationMode.Directional;
 
 			if(IsModalOpen) {
 				Select(ActiveModal.FirstElement);
@@ -244,17 +276,20 @@ namespace Sperlich.UISystem {
 			}
 
 			Debug.Log("Changed Navigate-Mode to DIGITAL");
+			NavigationModeChanged?.Invoke(NavigationMode.Directional);
 		}
 		public static void SetAnalogMode() {
 			if(Instance == null) return;
 			ShowCursor();
 			Instance.navigationMode = NavigationMode.Pointer;
+			Instance.desiredMode = NavigationMode.Pointer;
 
 			if (Instance.lastSelected != null || Instance.activeSelection != null) {
 				ClearSelection();
 			}
 
 			Debug.Log("Changed Navigate-Mode to ANALOG");
+			NavigationModeChanged?.Invoke(NavigationMode.Pointer);
 		}
 		public static void TriggerCooldown(float cooldown) {
 			if(Instance == null) return;

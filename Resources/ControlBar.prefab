@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1552741522349443095}
   m_Layer: 5
-  m_Name: container
+  m_Name: Container
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -166,6 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac3736951aad2054d81cc45fdb3b38da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  state: 1
   events: {fileID: 0}
   navigator: {fileID: 0}
   promptPrefab: {fileID: 4899371717392224568, guid: 54d750f152bb7074ca134e80a9a402cf, type: 3}

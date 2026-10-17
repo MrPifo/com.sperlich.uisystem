@@ -1,4 +1,5 @@
 using System;
+using Sperlich.Event;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -13,24 +14,15 @@ namespace Sperlich.UISystem {
 
 		[SerializeField]
 		private EventSignal events;
-		[SerializeField]
-		private UnityEvent<EventData> onClick;
-		[SerializeField]
-		private UnityEvent<EventData> onPointerEnter;
-		[SerializeField]
-		private UnityEvent<EventData> onPointerExit;
-		[SerializeField]
-		private UnityEvent<EventData> onPointerDown;
-		[SerializeField]
-		private UnityEvent<EventData> onPointerUp;
-		[SerializeField]
-		private UnityEvent<EventData> onPointerMove;
-		[SerializeField]
-		private UnityEvent<EventData> onDragBegin;
-		[SerializeField]
-		private UnityEvent<EventData> onDragEnd;
-		[SerializeField]
-		private UnityEvent<EventData> onDrag;
+		public SEvent<EventData> onClick = new();
+		public SEvent<EventData> onPointerEnter = new();
+		public SEvent<EventData> onPointerExit = new();
+		public SEvent<EventData> onPointerDown = new();
+		public SEvent<EventData> onPointerUp = new();
+		public SEvent<EventData> onPointerMove = new();
+		public SEvent<EventData> onDragBegin = new();
+		public SEvent<EventData> onDragEnd = new();
+		public SEvent<EventData> onDrag = new();
 
 		[SerializeField]
 		[HideInInspector]
@@ -55,7 +47,8 @@ namespace Sperlich.UISystem {
 
 		private bool InteractionAllowed {
 			get {
-				if(UINavigator.IsInactive) {
+				// No navigator in edit mode / Prefab Mode.
+				if(UINavigator.Instance == null || UINavigator.IsInactive) {
 					return false;
 				}
 				if(UINavigator.NavMode == NavigationMode.Directional && UINavigator.CursorDisabled) {
@@ -84,18 +77,18 @@ namespace Sperlich.UISystem {
 			return (events & flag) == flag;
 		}
 
-		public void Subscribe(EventSignal type, UnityAction<EventData> action) {
+		public void Subscribe(EventSignal type, Action<EventData> action) {
 			if (HasEvent(type) == false) {
 				events |= type;
 			}
 
-			var @event = GetEvent(type);
-			@event.AddListener(action);
+			GetEvent(type).AddListener(action);
 		}
-		public void Unsubscribe(EventSignal type, UnityAction<EventData> action) {
-			var @event = GetEvent(type);
-			@event.RemoveListener(action);
+		public void Subscribe(EventSignal type, UnityAction<EventData> action) => Subscribe(type, new Action<EventData>(action));
+		public void Unsubscribe(EventSignal type, Action<EventData> action) {
+			GetEvent(type).RemoveListener(action);
 		}
+		public void Unsubscribe(EventSignal type, UnityAction<EventData> action) => Unsubscribe(type, new Action<EventData>(action));
 		public void Trigger(EventSignal type) {
 			var eventData = new PointerEventData(UINavigator.EventSystem) {
 				pointerClick = gameObject,
@@ -181,26 +174,26 @@ namespace Sperlich.UISystem {
 			events = EventSignal.None;
 		}
 
-		private UnityEvent<EventData> GetEvent(EventSignal type) {
+		private SEvent<EventData> GetEvent(EventSignal type) {
 			switch (type) {
 				case EventSignal.Click:
-					return onClick ??= new UnityEvent<EventData>();
+					return onClick ??= new();
 				case EventSignal.PointerEnter:
-					return onPointerEnter ??= new UnityEvent<EventData>();
+					return onPointerEnter ??= new();
 				case EventSignal.PointerExit:
-					return onPointerExit ??= new UnityEvent<EventData>();
+					return onPointerExit ??= new();
 				case EventSignal.PointerDown:
-					return onPointerDown ??= new UnityEvent<EventData>();
+					return onPointerDown ??= new();
 				case EventSignal.PointerUp:
-					return onPointerUp ??= new UnityEvent<EventData>();
+					return onPointerUp ??= new();
 				case EventSignal.PointerMove:
-					return onPointerMove ??= new UnityEvent<EventData>();
+					return onPointerMove ??= new();
 				case EventSignal.DragBegin:
-					return onDragBegin ??= new UnityEvent<EventData>();
+					return onDragBegin ??= new();
 				case EventSignal.DragEnd:
-					return onDragEnd ??= new UnityEvent<EventData>();
+					return onDragEnd ??= new();
 				case EventSignal.Drag:
-					return onDrag ??= new UnityEvent<EventData>();
+					return onDrag ??= new();
 				default:
 					throw new UIException($"The requested EventSignal is not available: {type}", this);
 			}
@@ -286,6 +279,7 @@ namespace Sperlich.UISystem {
 
 			if (uiElement != null) {
 				uiElement.SetState(ComponentState.Pressed, true);
+				uiElement.HandlePointerDown(eventData);
 			}
 			if (HasEvent(EventSignal.PointerDown)) {
 				onPointerDown?.Invoke(new EventData(EventSignal.PointerDown, eventData, uiElement, this));

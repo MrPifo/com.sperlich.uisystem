@@ -54,7 +54,7 @@ namespace Sperlich.UISystem.Conponents.UIElements
             set
             {
                 handleTheme = value;
-                OnVisualsChanged(State);
+                OnVisualsChanged(VisualState);
             }
         }
 
@@ -86,23 +86,26 @@ namespace Sperlich.UISystem.Conponents.UIElements
         {
             base.OnAwake();
 
-            AddEvent(EventSignal.PointerEnter, OnPointerEnter);
-            AddEvent(EventSignal.PointerExit, OnPointerExit);
             AddEvent(EventSignal.PointerDown, OnPointerDown);
-            AddEvent(EventSignal.PointerUp, OnPointerUp);
             AddEvent(EventSignal.Drag, OnPointerDrag);
 
             OnVisualsChanged(ComponentState.Normal);
         }
 
-        protected virtual void OnEnable()
+        protected override void OnEnable()
         {
             _colorTween.Stop();
-            OnVisualsChanged(IsInteractable ? ComponentState.Normal : ComponentState.Disabled);
+            base.OnEnable();
+
+            if (Application.isPlaying == false)
+            {
+                OnVisualsChanged(IsInteractable ? ComponentState.Normal : ComponentState.Disabled);
+            }
         }
 
-        protected virtual void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             _colorTween.Stop();
         }
 
@@ -112,14 +115,18 @@ namespace Sperlich.UISystem.Conponents.UIElements
             _colorTween.Stop();
         }
 
-        protected internal override void OnStateChanged(ComponentState state)
+        protected override ComponentState EvaluateVisualState()
         {
-            base.OnStateChanged(state);
+            if (IsSelfDisabled) return ComponentState.Disabled;
+            if (HasEvents && events.isPressing) return ComponentState.Pressed;
+            if (HasEvents && events.isHovered) return ComponentState.Hovered;
 
-            if (state == ComponentState.Disabled)
-            {
-                OnVisualsChanged(IsState(ComponentState.Disabled) ? ComponentState.Disabled : ComponentState.Normal);
-            }
+            return ComponentState.Normal;
+        }
+
+        protected override void OnVisualStateChanged(ComponentState previous, ComponentState current)
+        {
+            OnVisualsChanged(current);
         }
 
         /// <summary>
@@ -165,33 +172,14 @@ namespace Sperlich.UISystem.Conponents.UIElements
 
         #region Event Handlers
 
-        private void OnPointerEnter(EventData evt)
-        {
-            if (!IsInteractable) return;
-            OnVisualsChanged(ComponentState.Hovered);
-        }
-
-        private void OnPointerExit(EventData evt)
-        {
-            if (!IsInteractable) return;
-            OnVisualsChanged(IsPressed ? ComponentState.Pressed : ComponentState.Normal);
-        }
-
         private void OnPointerDown(EventData evt)
         {
             if (!IsInteractable) return;
-            OnVisualsChanged(ComponentState.Pressed);
 
             if (evt.pointerData != null)
             {
                 UpdateRatioFromPointer(evt.pointerData);
             }
-        }
-
-        private void OnPointerUp(EventData evt)
-        {
-            if (!IsInteractable) return;
-            OnVisualsChanged(IsHovered ? ComponentState.Hovered : ComponentState.Normal);
         }
 
         private void OnPointerDrag(EventData evt)

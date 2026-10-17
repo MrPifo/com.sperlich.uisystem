@@ -52,12 +52,12 @@ namespace Sperlich.UISystem.Editor
             structure.Add(col.Property(viewportRect, "Viewport Rect"));
             structure.Add(col.Property(contentRect, "Content Rect"));
             structure.Add(col.Property(itemPrefab, "Item Prefab"));
-            structure.Add(col.Row("Direction", SperlichEditorWidgets.CreateSegmentedControl(direction, new[] { "Vertical", "Horizontal", "Both" }, Accent)));
+            structure.Add(col.Row("Direction", SperlichEditorWidgets.CreateSegmentedControl(direction, new[] { "Vertical", "Horizontal", "Both" }, Accent), direction));
 
             var vScrollbarRow = col.Property(verticalScrollbar, "Vertical Bar");
-            var vVisibilityRow = col.Row("V-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(vVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), indent: 1);
+            var vVisibilityRow = col.Row("V-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(vVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), vVisibility, indent: 1);
             var hScrollbarRow = col.Property(horizontalScrollbar, "Horizontal Bar");
-            var hVisibilityRow = col.Row("H-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(hVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), indent: 1);
+            var hVisibilityRow = col.Row("H-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(hVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), hVisibility, indent: 1);
             structure.Add(vScrollbarRow);
             structure.Add(vVisibilityRow);
             structure.Add(hScrollbarRow);

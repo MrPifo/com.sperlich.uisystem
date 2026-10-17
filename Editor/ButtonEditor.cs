@@ -53,16 +53,22 @@ namespace Sperlich.UISystem.Editor {
 				foreach (var obj in serializedObject.targetObjects) {
 					if (obj is Button btn) {
 						Undo.RecordObject(btn, "Toggle Button Interactable");
+						if (btn.HasNavigator) Undo.RecordObject(btn.Navigator, "Toggle Button Interactable");
 						btn.IsInteractable = nextState;
 						btn.TrySetButtonColor(btn.State);
 						btn.TrySetTextColor(btn.State);
 						EditorUtility.SetDirty(btn);
+						if (btn.HasNavigator) EditorUtility.SetDirty(btn.Navigator);
 					}
 				}
 				interactableToggle.SetValue(nextState);
 				serializedObject.Update();
 			};
-			stateSec.Add(col.Row("Interactable", interactableToggle));
+			// Undo/Redo or another inspector can flip the Disabled flag.
+			interactableToggle.TrackPropertyValue(stateProp, _ => {
+				if (target is Button b) interactableToggle.SetValue(b.IsInteractable);
+			});
+			stateSec.Add(col.Row("Interactable", interactableToggle, stateProp));
 
 			stateSec.Add(col.Row("Component State", SperlichEditorWidgets.CreateFlagsDropdown(stateProp, Accent, _ => {
 				foreach (var obj in serializedObject.targetObjects) {
@@ -72,7 +78,7 @@ namespace Sperlich.UISystem.Editor {
 						EditorUtility.SetDirty(btn);
 					}
 				}
-			})));
+			}), stateProp));
 
 			// ---- Visuals ------------------------------------------------------------------------
 			var visualsSec = Section(root, "VISUALS", true);
@@ -111,29 +117,57 @@ namespace Sperlich.UISystem.Editor {
 			textHeaderRow.Add(textContentLabel);
 			textContentContainer.Add(textHeaderRow);
 
+			// Edits go through the SText's own SerializedObject (not the Text property), so Undo, dirty state
+			// and prefab overrides work like on any normal field. Not bound by path on purpose: the inspector's
+			// own Bind() would rebind a bindingPath to the Button's SerializedObject.
 			var textContentField = new TextField { multiline = true };
 			textContentField.style.minHeight = 55;
+			SerializedObject textSO = null;
+			SerializedProperty textContentProp = null;
 			textContentField.RegisterValueChangedCallback(evt => {
-				if (textProp.objectReferenceValue is SText textComp) {
-					Undo.RecordObject(textComp, "Change Button Text");
-					textComp.Text = evt.newValue;
-					EditorUtility.SetDirty(textComp);
-				}
+				if (textContentProp == null) return;
+				textSO.Update();
+				textContentProp.stringValue = evt.newValue;
+				textSO.ApplyModifiedProperties();
 			});
 			textContentContainer.Add(textContentField);
 
+			// Holder stays in place; the row inside it is rebuilt per bound SText so the override bar never stacks.
+			var textContentHolder = new VisualElement();
+			visualsSec.Add(textContentHolder);
+
+			void SyncTextContentField() {
+				if (textContentProp == null) return;
+				try { textSO.Update(); } catch { return; /* SText destroyed */ }
+				textContentField.SetValueWithoutNotify(textContentProp.stringValue);
+			}
+
 			void RefreshTextContentField(SerializedProperty prop) {
+				textContentHolder.Clear();
+				var textContentRow = new VisualElement();
+				textContentRow.Add(textContentContainer);
+				textContentHolder.Add(textContentRow);
+
 				if (prop.objectReferenceValue is SText textComp) {
-					textContentField.SetValueWithoutNotify(textComp.Text);
+					textSO = new SerializedObject(textComp);
+					textContentProp = textSO.FindProperty("m_text");
+					SyncTextContentField();
+					SperlichPrefabOverride.Attach(textContentRow, textContentLabel, textContentProp);
 					textContentContainer.style.display = DisplayStyle.Flex;
 				} else {
+					textSO = null;
+					textContentProp = null;
 					textContentContainer.style.display = DisplayStyle.None;
 				}
 			}
 			RefreshTextContentField(textProp);
 			root.TrackPropertyValue(textProp, RefreshTextContentField);
 
-			visualsSec.Add(textContentContainer);
+			// Undo/Redo changes the SText behind this inspector's back.
+			Undo.undoRedoPerformed -= SyncTextContentField;
+			Undo.undoRedoPerformed += SyncTextContentField;
+			root.RegisterCallback<DetachFromPanelEvent>(_ => Undo.undoRedoPerformed -= SyncTextContentField);
+
 
 			// ---- Colors -------------------------------------------------------------------------
 			var (colorsHeader, colorsBody, _) = SperlichEditorWidgets.CreateChevronSection("COLORS", true, SperlichEditorTheme.BgStep, null, nameof(ButtonEditor));
@@ -162,8 +196,8 @@ namespace Sperlich.UISystem.Editor {
 			colorsWrap.Add(colorsBody);
 			root.Add(colorsWrap);
 
-			colorsBody.Add(new PropertyField(btnThemeProp, "Button Theme"));
-			colorsBody.Add(new PropertyField(textColorsProp, "Text Colors"));
+			colorsBody.Add(SperlichFieldColumn.Raw(btnThemeProp, "Button Theme"));
+			colorsBody.Add(SperlichFieldColumn.Raw(textColorsProp, "Text Colors"));
 
 			void ApplyNormalColorPreview() {
 				foreach (var obj in serializedObject.targetObjects) {
@@ -199,7 +233,7 @@ namespace Sperlich.UISystem.Editor {
 
 			// ---- Events -------------------------------------------------------------------------
 			var eventsSec = Section(root, "EVENTS", true);
-			eventsSec.Add(new PropertyField(onClickEventProp));
+			eventsSec.Add(SperlichFieldColumn.Raw(onClickEventProp));
 
 			// preserve scroll across inspector rebuilds
 			SperlichInspectorScroll.Preserve(root, target);

@@ -91,6 +91,17 @@ namespace Sperlich.UISystem {
 		//public UISystem UISystem => UISystem.Instance;
 		public UnityEvent<ComponentState, bool> OnStateChangedEvent { get; set; } = new();
 
+		private ComponentState visualState = ComponentState.Normal;
+		private int stateDepth;
+		private bool awakened;
+		private bool isRefreshingVisuals;
+		private bool visualRefreshPending;
+
+		/// <summary>
+		/// The single resolved visual state (see <see cref="EvaluateVisualState"/>).
+		/// </summary>
+		public ComponentState VisualState => visualState;
+
 		protected virtual void Awake() {
 			FetchComponents();
 
@@ -101,8 +112,30 @@ namespace Sperlich.UISystem {
 				}
 
 				OnAwake();
+				awakened = true;
 			}
 		}
+		protected virtual void OnEnable() {
+			if (Application.isPlaying && awakened) {
+				UINavigator.NavigationModeChanged += OnNavigationModeChanged;
+				RefreshVisualState(true);
+			}
+		}
+		protected virtual void OnDisable() {
+			if (Application.isPlaying) {
+				UINavigator.NavigationModeChanged -= OnNavigationModeChanged;
+
+				if (HasEvents) {
+					events.isHovered = false;
+					events.isPressing = false;
+					events.isClicking = false;
+				}
+
+				state &= ~(ComponentState.Hovered | ComponentState.Pressed);
+				visualState = ComponentState.Normal;
+			}
+		}
+		void OnNavigationModeChanged(NavigationMode mode) => RefreshVisualState();
 		void Update() {
 			if (IsInteractionAllowed == false) {
 				return;
@@ -124,21 +157,118 @@ namespace Sperlich.UISystem {
 		protected virtual void OnUpdate() { }
 		#endregion
 
-		#region Helpers
-		internal void SetState(ComponentState newState, bool state) {
-			bool becomingDisabled = newState == ComponentState.Disabled && state && IsState(ComponentState.Disabled) == false;
-			if (becomingDisabled && HasEvents) {
-				events.OnPointerExit(new PointerEventData(EventSystem.current));
+		#region Visual State
+		/// <summary>
+		/// Called only when the resolved <see cref="VisualState"/> changes (or on a forced refresh). Override to update visuals.
+		/// </summary>
+		protected virtual void OnVisualStateChanged(ComponentState previous, ComponentState current) { }
+
+		/// <summary>
+		/// Resolves the single visual state: Disabled > Pressed > Selected (Directional only) > Hovered (Pointer only) > Normal.
+		/// Override for elements with different rules.
+		/// </summary>
+		protected virtual ComponentState EvaluateVisualState() {
+			if (IsSelfDisabled) {
+				return ComponentState.Disabled;
+			}
+			if (HasEvents && events.isClicking) {
+				return ComponentState.Pressed;
 			}
 
-			if(state) {
-				State |= newState;
-			} else {
-				State &= ~newState;
+			bool directional = IsDirectionalMode;
+			if (directional && HasNavigator && navigator.IsSelected) {
+				return ComponentState.Selected;
 			}
-			
-			OnStateChangedEvent.Invoke(newState, state);
-			OnStateChanged(newState);
+			if (directional == false && HasEvents && events.isHovered) {
+				return ComponentState.Hovered;
+			}
+
+			return ComponentState.Normal;
+		}
+
+		/// <summary>
+		/// True when this element itself is disabled. A closed or fading parent CanvasGroup does not count.
+		/// </summary>
+		protected bool IsSelfDisabled => HasNavigator ? navigator.interactable == false : IsState(ComponentState.Disabled);
+		protected static bool IsDirectionalMode => UINavigator.Instance != null && UINavigator.NavMode == NavigationMode.Directional;
+
+		/// <summary>
+		/// Opt-in: selects this element (and so makes it the keyboard/controller start point) when it is pressed with the mouse.
+		/// </summary>
+		protected virtual bool SelectOnPointerDown => false;
+
+		/// <summary>
+		/// Re-evaluates the visual state and calls <see cref="OnVisualStateChanged"/> if it changed. Use <paramref name="force"/> to call it regardless.
+		/// </summary>
+		protected void RefreshVisualState(bool force = false) {
+			if (Application.isPlaying == false || awakened == false || stateDepth > 0) {
+				return;
+			}
+			if (isRefreshingVisuals) {
+				visualRefreshPending = true;
+				return;
+			}
+
+			for (int pass = 0; pass < 2; pass++) {
+				visualRefreshPending = false;
+
+				ComponentState next = EvaluateVisualState();
+				if (force == false && next == visualState) {
+					return;
+				}
+
+				force = false;
+				ComponentState previous = visualState;
+				visualState = next;
+
+				isRefreshingVisuals = true;
+				try {
+					OnVisualStateChanged(previous, next);
+				} finally {
+					isRefreshingVisuals = false;
+				}
+
+				if (visualRefreshPending == false) {
+					return;
+				}
+			}
+		}
+		internal void RefreshVisualStateInternal() => RefreshVisualState();
+
+		internal void HandlePointerDown(PointerEventData eventData) {
+			if (SelectOnPointerDown == false || HasNavigator == false || IsSelected) {
+				return;
+			}
+			if (eventData.button != PointerEventData.InputButton.Left || navigator.IsInteractable() == false) {
+				return;
+			}
+
+			Select();
+		}
+		#endregion
+
+		#region Helpers
+		internal void SetState(ComponentState newState, bool state) {
+			stateDepth++;
+			try {
+				bool becomingDisabled = newState == ComponentState.Disabled && state && IsState(ComponentState.Disabled) == false;
+				if (becomingDisabled && HasEvents) {
+					events.OnPointerExit(new PointerEventData(EventSystem.current));
+				}
+
+				if(state) {
+					State |= newState;
+				} else {
+					State &= ~newState;
+				}
+
+				OnStateChangedEvent.Invoke(newState, state);
+				OnStateChanged(newState);
+			} finally {
+				stateDepth--;
+			}
+
+			RefreshVisualState();
 		}
 		public bool IsState(ComponentState state) {
 			return State.HasFlag(state);
@@ -233,10 +363,16 @@ namespace Sperlich.UISystem {
 		}
 
 		#region Event Operations
-		public void AddEvent(EventSignal type, UnityAction<EventData> action) {
-			if(events == null) {
+		/// <summary>
+		/// Creates the pointer event module if missing. Call it from <see cref="OnAwake"/> when the element needs hover/press state without subscribing to a pointer event.
+		/// </summary>
+		protected void EnsureEvents() {
+			if (events == null) {
 				events = gameObject.AddComponent<UIEvents>();
 			}
+		}
+		public void AddEvent(EventSignal type, UnityAction<EventData> action) {
+			EnsureEvents();
 
 			if(type == EventSignal.Select || type == EventSignal.Deselect || type == EventSignal.Submit || type == EventSignal.Cancel) {
 				if (navigator == null) {

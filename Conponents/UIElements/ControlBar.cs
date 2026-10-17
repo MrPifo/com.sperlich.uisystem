@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using PrimeTween;
+using Sperlich.Event;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -149,7 +150,7 @@ namespace Sperlich.UISystem {
 		}
 		public ButtonPromptHint GetButtonPromptHint(Enum @enum) {
 			foreach (ButtonPromptHint btn in buttonPrompts) {
-				if(btn.action.ActionEnum.ToString().ToLower() == @enum.ToString().ToLower()) {
+				if(btn.Action.ActionEnum.ToString().ToLower() == @enum.ToString().ToLower()) {
 					return btn;
 				}
 			}
@@ -197,7 +198,7 @@ namespace Sperlich.UISystem {
 
 		public string text;
 		public InputActionReference action;
-		public UnityEvent onPressEvent;
+		public SEvent onPressEvent = new();
 
 	}
 }

@@ -1,85 +1,107 @@
+using Sperlich.EditorKit;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem.Editor {
+	using FlexDirection = UnityEngine.UIElements.FlexDirection;
+
 	[CustomEditor(typeof(UIEvents))]
+	[CanEditMultipleObjects]
 	public class UIEventsEditor : UnityEditor.Editor {
-		private SerializedProperty events;
-		private SerializedProperty onClick;
-		private SerializedProperty onPointerEnter;
-		private SerializedProperty onPointerExit;
-		private SerializedProperty onPointerDown;
-		private SerializedProperty onPointerUp;
-		private SerializedProperty onPointerMove;
-		private SerializedProperty onDragBegin;
-		private SerializedProperty onDragEnd;
-		private SerializedProperty onDrag;
 
-		private void OnEnable() {
-			events = serializedObject.FindProperty("events");
-			onClick = serializedObject.FindProperty("onClick");
-			onPointerEnter = serializedObject.FindProperty("onPointerEnter");
-			onPointerExit = serializedObject.FindProperty("onPointerExit");
-			onPointerDown = serializedObject.FindProperty("onPointerDown");
-			onPointerUp = serializedObject.FindProperty("onPointerUp");
-			onPointerMove = serializedObject.FindProperty("onPointerMove");
-			onDragBegin = serializedObject.FindProperty("onDragBegin");
-			onDragEnd = serializedObject.FindProperty("onDragEnd");
-			onDrag = serializedObject.FindProperty("onDrag");
+		private static readonly Color BadgeOn = new(0.18f, 0.55f, 0.34f, 0.35f);
+		private static readonly Color BadgeOff = new(1f, 1f, 1f, 0.06f);
+
+		public override VisualElement CreateInspectorGUI() {
+			var root = new VisualElement();
+
+			SerializedProperty eventsProp = serializedObject.FindProperty("events");
+
+			// ---- Runtime -------------------------------------------------------------------------
+			var runtimeRow = new VisualElement {
+				style = {
+					flexDirection = FlexDirection.Row,
+					alignItems = Align.Center,
+					paddingLeft = 8,
+					paddingRight = 8,
+					paddingTop = 5,
+					paddingBottom = 5,
+					marginBottom = 4,
+					backgroundColor = SperlichEditorTheme.BgStep
+				}
+			};
+			SperlichEditorWidgets.SetRadius(runtimeRow, 4);
+			AddStateBadge(root, runtimeRow, "isHovered", "HOVERED");
+			AddStateBadge(root, runtimeRow, "isPressing", "PRESSING");
+			AddStateBadge(root, runtimeRow, "isClicking", "CLICKING");
+			AddStateBadge(root, runtimeRow, "isDragging", "DRAGGING");
+			root.Add(runtimeRow);
+
+			// ---- Signals -------------------------------------------------------------------------
+			var signalsSec = Section(root, "SIGNALS", true);
+			signalsSec.Add(SperlichFieldColumn.Raw(eventsProp));
+
+			// ---- Callbacks -----------------------------------------------------------------------
+			var callbacksSec = Section(root, "CALLBACKS", true);
+			var callbacks = new (EventSignal flag, VisualElement field)[] {
+				(EventSignal.Click, Callback("onClick")),
+				(EventSignal.PointerEnter, Callback("onPointerEnter")),
+				(EventSignal.PointerExit, Callback("onPointerExit")),
+				(EventSignal.PointerDown, Callback("onPointerDown")),
+				(EventSignal.PointerUp, Callback("onPointerUp")),
+				(EventSignal.PointerMove, Callback("onPointerMove")),
+				(EventSignal.DragBegin, Callback("onDragBegin")),
+				(EventSignal.DragEnd, Callback("onDragEnd")),
+				(EventSignal.Drag, Callback("onDrag")),
+			};
+			foreach (var (_, field) in callbacks) {
+				callbacksSec.Add(field);
+			}
+
+			void RefreshCallbacks(SerializedProperty prop) {
+				var mask = (EventSignal)prop.intValue;
+				foreach (var (flag, field) in callbacks) {
+					field.style.display = (mask & flag) == flag ? DisplayStyle.Flex : DisplayStyle.None;
+				}
+			}
+			RefreshCallbacks(eventsProp);
+			root.TrackPropertyValue(eventsProp, RefreshCallbacks);
+
+			SperlichInspectorScroll.Preserve(root, target);
+
+			return root;
 		}
 
-		public override void OnInspectorGUI() {
-			serializedObject.Update();
-
-			EditorGUILayout.PropertyField(events);
-
-			EventSignal selectedEvents = (EventSignal)events.intValue;
-
-			if (selectedEvents != EventSignal.None) {
-				EditorGUILayout.Space();
-				EditorGUILayout.LabelField("Event Callbacks", EditorStyles.boldLabel);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.Click)) {
-				EditorGUILayout.PropertyField(onClick);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.PointerEnter)) {
-				EditorGUILayout.PropertyField(onPointerEnter);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.PointerExit)) {
-				EditorGUILayout.PropertyField(onPointerExit);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.PointerDown)) {
-				EditorGUILayout.PropertyField(onPointerDown);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.PointerUp)) {
-				EditorGUILayout.PropertyField(onPointerUp);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.PointerMove)) {
-				EditorGUILayout.PropertyField(onPointerMove);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.DragBegin)) {
-				EditorGUILayout.PropertyField(onDragBegin);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.DragEnd)) {
-				EditorGUILayout.PropertyField(onDragEnd);
-			}
-
-			if (HasFlag(selectedEvents, EventSignal.Drag)) {
-				EditorGUILayout.PropertyField(onDrag);
-			}
-
-			serializedObject.ApplyModifiedProperties();
+		private VisualElement Callback(string propertyName) {
+			return SperlichFieldColumn.Raw(serializedObject.FindProperty(propertyName));
 		}
 
-		private bool HasFlag(EventSignal value, EventSignal flag) {
-			return (value & flag) == flag;
+		private void AddStateBadge(VisualElement root, VisualElement row, string propertyName, string text) {
+			SerializedProperty prop = serializedObject.FindProperty(propertyName);
+
+			var badge = SperlichEditorWidgets.CreateBadge(text, prop.boolValue ? BadgeOn : BadgeOff, prop.boolValue ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted);
+			badge.style.marginRight = 4;
+			row.Add(badge);
+
+			root.TrackPropertyValue(prop, p => {
+				badge.style.backgroundColor = p.boolValue ? BadgeOn : BadgeOff;
+				badge.style.color = p.boolValue ? SperlichUIEditorStyle.ActiveColor : SperlichEditorTheme.TextMuted;
+			});
+		}
+
+		private static VisualElement Section(VisualElement parent, string title, bool expanded) {
+			var (header, body, _) = SperlichEditorWidgets.CreateChevronSection(title, expanded, SperlichEditorTheme.BgStep, null, nameof(UIEventsEditor));
+			body.style.paddingLeft = 6;
+			body.style.paddingRight = 6;
+			body.style.paddingTop = 4;
+			body.style.paddingBottom = 6;
+			var wrap = new VisualElement { style = { marginBottom = 4 } };
+			wrap.Add(header);
+			wrap.Add(body);
+			parent.Add(wrap);
+			return body;
 		}
 	}
 }

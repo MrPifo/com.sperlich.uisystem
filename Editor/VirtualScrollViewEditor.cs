@@ -91,12 +91,12 @@ namespace Sperlich.UISystem.Editor
                 mode,
                 new[] { "Vertical", "Horizontal", "Grid (V)", "Grid (H)", "Grid 2D" },
                 Accent
-            )));
+            ), mode));
 
             var vScrollbarRow = col.Property(verticalScrollbar, "Vertical Bar");
-            var vVisibilityRow = col.Row("V-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(vVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), indent: 1);
+            var vVisibilityRow = col.Row("V-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(vVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), vVisibility, indent: 1);
             var hScrollbarRow = col.Property(horizontalScrollbar, "Horizontal Bar");
-            var hVisibilityRow = col.Row("H-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(hVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), indent: 1);
+            var hVisibilityRow = col.Row("H-Bar Mode", SperlichEditorWidgets.CreateSegmentedControl(hVisibility, new[] { "Permanent", "AutoHide", "Hide" }, Accent), hVisibility, indent: 1);
             structure.Add(vScrollbarRow);
             structure.Add(vVisibilityRow);
             structure.Add(hScrollbarRow);
@@ -189,7 +189,7 @@ namespace Sperlich.UISystem.Editor
                 selectionMode,
                 new[] { "None", "Single", "Multiple" },
                 Accent
-            )));
+            ), selectionMode));
 
             interaction.Add(col.Property(snapToItems, "Snap to Item"));
             var snapThresholdRow = col.DragNumber(snapVelocityThreshold, "Snap Threshold", 10f, 1000f, indent: 1);

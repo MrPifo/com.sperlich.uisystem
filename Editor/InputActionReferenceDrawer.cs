@@ -1,63 +1,108 @@
-#if UNITY_EDITOR
 using System;
+using System.Linq;
+using Sperlich.EditorKit;
 using UnityEditor;
-using UnityEngine;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace Sperlich.UISystem {
+
+	/// <summary>EditorKit drawer: category dropdown + an alphabetically sorted action dropdown from the matching action enum.</summary>
 	[CustomPropertyDrawer(typeof(InputActionReference))]
 	public class InputActionReferenceDrawer : PropertyDrawer {
 
-		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-			EditorGUI.BeginProperty(position, label, property);
+		public override VisualElement CreatePropertyGUI(SerializedProperty property) {
+			SerializedProperty categoryProp = property.FindPropertyRelative("category");
+			SerializedProperty selectedProp = property.FindPropertyRelative("selectedAction");
 
-			var categoryProp = property.FindPropertyRelative("category");
-			var selectedActionProp = property.FindPropertyRelative("selectedAction");
-
-			float lineHeight = EditorGUIUtility.singleLineHeight;
-			float spacing = 2f;
-
-			Rect categoryRect = new Rect(position.x, position.y, position.width, lineHeight);
-			Rect actionRect = new Rect(position.x, position.y + lineHeight + spacing, position.width, lineHeight);
-
-			// Draw InputCategory enum popup
-			EditorGUI.PropertyField(categoryRect, categoryProp);
-
-			// Get the selected category's type
-			InputCategory selectedCategory = (InputCategory)categoryProp.enumValueIndex;
-			string enumTypeName = selectedCategory.ToString(); // assumes type name matches enum entry
-
-			Type enumType = FindEnumType(enumTypeName);
-
-			if (enumType != null && enumType.IsEnum) {
-				string[] enumNames = Enum.GetNames(enumType);
-				int currentIndex = selectedActionProp.intValue;
-
-				if (currentIndex < 0 || currentIndex >= enumNames.Length) {
-					currentIndex = 0;
-				}
-
-				int newIndex = EditorGUI.Popup(actionRect, "Action", currentIndex, enumNames);
-				selectedActionProp.intValue = newIndex;
-			} else {
-				EditorGUI.HelpBox(actionRect, $"Enum type '{enumTypeName}' not found.", MessageType.Warning);
+			string[] ActionNames() {
+				string[] cats = categoryProp.enumNames;
+				int idx = categoryProp.enumValueIndex;
+				Type enumType = cats != null && idx >= 0 && idx < cats.Length ? FindEnumType(cats[idx]) : null;
+				return enumType != null ? Enum.GetNames(enumType) : Array.Empty<string>();
 			}
 
-			EditorGUI.EndProperty();
+			// original enum indices, ordered alphabetically by display name
+			int[] SortedOrder() {
+				string[] names = ActionNames();
+				return Enumerable.Range(0, names.Length)
+					.OrderBy(i => ObjectNames.NicifyVariableName(names[i]), StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+			}
+
+			string SlotLabel(int slot) {
+				string[] names = ActionNames();
+				int[] order = SortedOrder();
+				return slot >= 0 && slot < order.Length ? ObjectNames.NicifyVariableName(names[order[slot]]) : "—";
+			}
+
+			int SelectedSlot() {
+				int[] order = SortedOrder();
+				int slot = Array.IndexOf(order, selectedProp.intValue);
+				return slot >= 0 ? slot : (order.Length > 0 ? 0 : -1);
+			}
+
+			var root = new VisualElement { style = { marginTop = 2, marginBottom = 2 } };
+			root.Add(new Label(property.displayName) {
+				style = { fontSize = 11, color = SperlichEditorTheme.TextSecondary, marginBottom = 3 }
+			});
+
+			VisualElement actionDropdown = null;
+			void RefreshLabel() {
+				Label lbl = actionDropdown?.Q<Label>();
+				if (lbl != null) {
+					lbl.text = SlotLabel(SelectedSlot());
+				}
+			}
+
+			actionDropdown = SperlichEditorWidgets.BuildDropdown(
+				() => SortedOrder().Length,
+				SlotLabel,
+				SelectedSlot,
+				slot => {
+					int[] order = SortedOrder();
+					if (slot >= 0 && slot < order.Length) {
+						selectedProp.intValue = order[slot];
+						selectedProp.serializedObject.ApplyModifiedProperties();
+					}
+				});
+
+			var categoryDropdown = SperlichEditorWidgets.CreateEnumDropdown(categoryProp, null, _ => {
+				selectedProp.intValue = 0;
+				selectedProp.serializedObject.ApplyModifiedProperties();
+				RefreshLabel();
+			});
+
+			root.Add(Row("Category", categoryDropdown));
+			root.Add(Row("Action", actionDropdown));
+
+			root.TrackPropertyValue(selectedProp, _ => RefreshLabel());
+			root.TrackPropertyValue(categoryProp, _ => RefreshLabel());
+			RefreshLabel();
+
+			return root;
 		}
 
-		public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
-			return EditorGUIUtility.singleLineHeight * 2 + 2f;
+		static VisualElement Row(string label, VisualElement control) {
+			var row = new VisualElement {
+				style = { flexDirection = UnityEngine.UIElements.FlexDirection.Row, alignItems = Align.Center, marginBottom = 2 }
+			};
+			row.Add(new Label(label) {
+				style = { width = 70, fontSize = 11, color = SperlichEditorTheme.TextSecondary }
+			});
+			control.style.flexGrow = 1;
+			row.Add(control);
+			return row;
 		}
 
-		private static Type FindEnumType(string enumName) {
-			// Durchsuche alle geladenen Assemblies nach einem Typ mit dem Namen "Controls", "UINavigation", etc.
+		static Type FindEnumType(string enumName) {
 			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
 				Type type = assembly.GetType($"Sperlich.UISystem.{enumName}");
-				if (type != null && type.IsEnum)
+				if (type != null && type.IsEnum) {
 					return type;
+				}
 			}
 			return null;
 		}
 	}
 }
-#endif

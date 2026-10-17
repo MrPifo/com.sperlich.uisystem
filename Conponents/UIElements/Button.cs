@@ -34,10 +34,6 @@ namespace Sperlich.UISystem {
 
 		protected override void OnAwake() {
 			AddEvent(EventSignal.Click, OnClick);
-			AddEvent(EventSignal.PointerEnter, PointerEnter);
-			AddEvent(EventSignal.PointerExit, PointerExit);
-			AddEvent(EventSignal.PointerDown, PointerDown);
-			AddEvent(EventSignal.PointerUp, PointerUp);
 
 			if (HasNavigator) {
 				AddEvent(EventSignal.Submit, OnClick);
@@ -57,36 +53,9 @@ namespace Sperlich.UISystem {
 		}
 
 		#region Events
-		protected override void OnSelect(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Selected);
-			}
-		}
-		protected override void OnDeselect(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Normal);
-			}
-		}
-		protected virtual void PointerEnter(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Hovered);
-			}
-		}
-		protected virtual void PointerExit(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Normal);
-			}
-		}
-		protected virtual void PointerDown(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Pressed);
-			}
-		}
-		protected virtual void PointerUp(EventData evt) {
-			if (IsInteractable) {
-				OnVisualsChanged(ComponentState.Hovered);
-			}
-		}
+		protected override bool SelectOnPointerDown => true;
+		protected override void OnVisualStateChanged(ComponentState previous, ComponentState current) => OnVisualsChanged(current);
+		protected internal sealed override void OnSubmit(EventData evt) { }
 		protected virtual void OnClick(EventData evt) {
 			onClickEvent.Invoke();
 		}

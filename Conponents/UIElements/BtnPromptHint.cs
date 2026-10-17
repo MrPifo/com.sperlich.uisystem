@@ -1,70 +1,100 @@
+using System.Globalization;
+using Sperlich.Event;
 using Sperlich.Text;
 using Sperlich.UISystem.Themes;
 using UnityEngine;
-using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace Sperlich.UISystem {
 	[DefaultExecutionOrder(1000)]
 	public class ButtonPromptHint : UIBase {
 
 		[Header("Action")]
-		[SerializeField]
+		[SerializeField, TextArea(2, 4)]
 		private string text = "";
 		[SerializeField]
-		public InputActionReference action = new();
+		private InputActionReference action = new();
 
 		[Header("Visuals")]
-		public float fadeSpeed = 0.12f;
-		public ColorThemeAsset txtColor;
+		[SerializeField, FormerlySerializedAs("_text")]
+		private SText label;
+		[SerializeField, Min(0f)]
+		private float promptSize = 1f;
 		[SerializeField]
-		private SText _text;
+		private ColorThemeRef textColor = new();
 		[SerializeField]
-		private UnityEvent onPressEvent;
+		private float fadeSpeed = 0.12f;
 
-		public SText Text => _text;
-		public UnityEvent OnPressEvent => onPressEvent;
+		[Header("Events")]
+		[SerializeField]
+		private SEvent onPressEvent = new();
+
+		public SText Label => label;
+		public InputActionReference Action => action;
+		public SEvent OnPressEvent => onPressEvent;
+		public float FadeSpeed => fadeSpeed;
+
+		/// <summary>Glyph size as a multiple of the label font size. Re-renders on change.</summary>
+		public float PromptSize {
+			get => promptSize;
+			set {
+				promptSize = Mathf.Max(0f, value);
+				SetText(text);
+			}
+		}
 
 		protected override void FetchComponents() {
 			base.FetchComponents();
 
-			if (_text == null) {
-				_text = GetComponentInChildren<SText>();
+			if (label == null) {
+				label = GetComponentInChildren<SText>();
 			}
-			if (_text != null) {
-				if (txtColor != null) {
-					_text.color = txtColor.GetColor(ComponentState.Normal);
+			if (label != null) {
+				if (textColor.HasTheme) {
+					label.color = textColor.GetColor(ComponentState.Normal);
 				}
 				SetText(text);
 			}
 		}
 
-		public void SetText(string text) {
-			this.text = text;
-			string actionKey = action.ActionEnum.ToString();
-			string replaceText = "[" + actionKey + "]";
-			
-			string output = text.Replace("@action@", replaceText);
-			if (_text != null) {
-			    _text.SetText(output);
-			}
-		}
-		public void SetControlAction(ControlAction action) {
-			this.action = action.action;
-			this.onPressEvent = action.onPressEvent;
-			this.name = action.action.ActionEnum.ToString();
+		protected internal override void OnSubmit(EventData evt) => onPressEvent.Invoke();
 
-			SetText(action.text);
+		/// <summary>
+		/// Sets the prompt text. The token <c>@action@</c> is replaced with an SText glyph tag
+		/// (<c>&lt;glyph:ActionName size="x"&gt;</c>) that resolves to the icon of the active input device.
+		/// </summary>
+		public void SetText(string value) {
+			text = value;
+			if (label == null) {
+				return;
+			}
+
+			string actionKey = action?.ActionEnum.ToString() ?? string.Empty;
+			string size = promptSize.ToString("0.###", CultureInfo.InvariantCulture);
+			string glyphTag = $"<glyph:{actionKey} size=\"{size}\">";
+
+			label.SetText(value.Replace("@action@", glyphTag));
 		}
+
+		public void SetControlAction(ControlAction controlAction) {
+			action = controlAction.action;
+			name = controlAction.action.ActionEnum.ToString();
+			onPressEvent = controlAction.onPressEvent ?? new SEvent();
+
+			SetText(controlAction.text);
+		}
+
 		public void SetDisabled() {
 			State = ComponentState.Disabled;
-			if (_text != null && txtColor != null) {
-				_text.color = txtColor.GetColor(ComponentState.Disabled);
+			if (label != null && textColor.HasTheme) {
+				label.color = textColor.GetColor(ComponentState.Disabled);
 			}
 		}
+
 		public void SetEnabled() {
 			State = ComponentState.Normal;
-			if (_text != null && txtColor != null) {
-				_text.color = txtColor.GetColor(ComponentState.Normal);
+			if (label != null && textColor.HasTheme) {
+				label.color = textColor.GetColor(ComponentState.Normal);
 			}
 		}
 	}
